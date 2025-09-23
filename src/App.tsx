@@ -25,22 +25,8 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route 
-              path="/admin/auth-config" 
-              element={
-                <ProtectedRoute requireAdmin>
-                  <AuthConfig />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/admin/pending-requests" 
-              element={
-                <ProtectedRoute requireAdmin>
-                  <PendingRequests />
-                </ProtectedRoute>
-              } 
-            />
+            <Route path="/admin/auth-config" element={<AuthConfig />} />
+            <Route path="/admin/pending-requests" element={<PendingRequests />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

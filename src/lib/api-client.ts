@@ -29,6 +29,7 @@ class AuthAPIClient {
 
   constructor(baseUrl = 'http://localhost:8000') {
     this.baseUrl = baseUrl;
+    console.log('AuthAPIClient initialized with baseUrl:', baseUrl);
   }
 
   setAccessToken(token: string | null) {

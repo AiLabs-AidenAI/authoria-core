@@ -5,67 +5,37 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Shield, Settings, Users, Key, ArrowRight } from 'lucide-react';
+import { Shield, Settings, Users, ArrowRight } from 'lucide-react';
 
 const Index = () => {
-  const { user } = useAuth();
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
-        <div className="max-w-md w-full space-y-8 text-center">
-          <div className="space-y-4">
-            <div className="flex justify-center">
-              <Shield className="h-12 w-12 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Authentication Service</h1>
-              <p className="text-muted-foreground mt-2">
-                Secure, centralized authentication for all your applications
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <Button asChild className="w-full">
-              <Link to="/login" className="flex items-center justify-center space-x-2">
-                <Key className="h-4 w-4" />
-                <span>Sign In</span>
-              </Link>
-            </Button>
-            
-            <Button asChild variant="outline" className="w-full">
-              <Link to="/signup" className="flex items-center justify-center space-x-2">
-                <Users className="h-4 w-4" />
-                <span>Request Access</span>
-              </Link>
-            </Button>
-          </div>
-
-          <div className="text-xs text-muted-foreground">
-            Centralized SSO • Multi-factor Authentication • Role-based Access
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Welcome back, {user.firstName || user.email}
-          </h1>
-          <p className="text-muted-foreground">
-            Manage authentication providers and user access for your applications
-          </p>
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <Shield className="h-6 w-6 text-primary" />
+            <h1 className="text-xl font-bold">Auth Central</h1>
+          </div>
+          <div className="flex items-center space-x-4">
+            <span className="text-sm text-muted-foreground">
+              Authentication Control System
+            </span>
+          </div>
         </div>
+      </header>
 
-        {user.role === 'admin' ? (
+      <div className="p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-foreground mb-2">
+              Authentication Control System
+            </h1>
+            <p className="text-muted-foreground">
+              Manage authentication providers and user access for your applications
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <Link to="/admin/auth-config">
@@ -105,55 +75,33 @@ const Index = () => {
               <CardHeader>
                 <div className="flex items-center space-x-2">
                   <Shield className="h-5 w-5 text-primary" />
-                  <CardTitle className="text-lg">System Status</CardTitle>
+                  <CardTitle className="text-lg">Backend Status</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Service</span>
+                    <span className="text-sm text-muted-foreground">Auth Service</span>
                     <div className="flex items-center space-x-1">
-                      <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                      <span className="text-sm font-medium text-green-600">Online</span>
+                      <div className="h-2 w-2 rounded-full bg-red-500"></div>
+                      <span className="text-sm font-medium text-red-600">Not Running</span>
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Database</span>
                     <div className="flex items-center space-x-1">
-                      <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                      <span className="text-sm font-medium text-green-600">Connected</span>
+                      <div className="h-2 w-2 rounded-full bg-red-500"></div>
+                      <span className="text-sm font-medium text-red-600">Disconnected</span>
                     </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    Start backend: <code className="bg-muted px-1 rounded">docker-compose up</code>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>User Dashboard</CardTitle>
-              <CardDescription>
-                Your account information and settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Email</label>
-                  <p className="text-foreground">{user.email}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Role</label>
-                  <p className="text-foreground capitalize">{user.role}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Status</label>
-                  <p className="text-green-600 font-medium">Active</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        </div>
       </div>
     </div>
   );
