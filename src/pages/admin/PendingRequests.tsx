@@ -591,3 +591,5 @@ export const PendingRequests = () => {
     </div>
   );
 };
+
+export default PendingRequests;

@@ -63,6 +63,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         id: response.userId,
         email: response.email,
         displayName: '', // Will be filled by user profile endpoint
+        role: 'user',
         isActive: true,
         isApproved: true,
         isAdmin: false,
@@ -109,6 +110,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         id: response.userId,
         email: response.email,
         displayName: '',
+        role: 'user',
         isActive: true,
         isApproved: true,
         isAdmin: false,
@@ -209,6 +211,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         id: response.userId,
         email: response.email,
         displayName: '',
+        role: 'user',
         isActive: true,
         isApproved: true,
         isAdmin: false,
