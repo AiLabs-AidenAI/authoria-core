@@ -43,6 +43,7 @@ import {
 import { authAPI, getProviderIcon } from '@/lib/api-client';
 import { UserWithLoginModes, UserFilters } from '@/types/auth';
 import { toast } from '@/hooks/use-toast';
+import { AppLayout } from '@/components/Layout/AppLayout';
 
 export default function Users() {
   const [filters, setFilters] = useState<UserFilters>({
@@ -162,7 +163,8 @@ export default function Users() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <AppLayout>
+      <div className="container mx-auto py-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Users Management</h1>
@@ -451,6 +453,7 @@ export default function Users() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AppLayout>
   );
 }

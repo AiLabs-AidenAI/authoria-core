@@ -67,6 +67,8 @@ interface ClientApplication {
   contactEmail?: string;
 }
 
+import { AppLayout } from '@/components/Layout/AppLayout';
+
 const AuthConfig: React.FC = () => {
   const [activeTab, setActiveTab] = useState('providers');
   const [showPassword, setShowPassword] = useState<{[key: string]: boolean}>({});
@@ -463,13 +465,14 @@ const AuthConfig: React.FC = () => {
   );
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Authentication Configuration</h1>
-        <p className="text-muted-foreground">
-          Configure SSO providers, SMTP settings, and client applications for your authentication service.
-        </p>
-      </div>
+    <AppLayout>
+      <div className="container mx-auto p-6 max-w-6xl">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold">Authentication Configuration</h1>
+          <p className="text-muted-foreground">
+            Configure SSO providers, SMTP settings, and client applications for your authentication service.
+          </p>
+        </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
@@ -704,7 +707,8 @@ const AuthConfig: React.FC = () => {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </AppLayout>
   );
 };
 

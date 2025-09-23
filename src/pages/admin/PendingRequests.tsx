@@ -18,6 +18,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { authAPI, downloadFile } from '@/lib/api-client';
 import { PendingSignup, PendingSignupFilters } from '@/types/auth';
+import { AppLayout } from '@/components/Layout/AppLayout';
 
 interface BulkActionToolbarProps {
   selectedCount: number;
@@ -246,7 +247,8 @@ export const PendingRequests = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <AppLayout>
+      <div className="container mx-auto py-8 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -588,7 +590,8 @@ export const PendingRequests = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </AppLayout>
   );
 };
 
