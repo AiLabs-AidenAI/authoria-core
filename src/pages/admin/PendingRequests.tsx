@@ -292,15 +292,15 @@ export const PendingRequests = () => {
 
             <div className="space-y-2">
               <Label>Status</Label>
-              <Select
-                value={filters.status || ''}
-                onValueChange={(value) => setFilters(prev => ({ ...prev, status: value as any, page: 1 }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All statuses</SelectItem>
+            <Select
+              value={filters.status || 'all'}
+              onValueChange={(value) => setFilters(prev => ({ ...prev, status: value === 'all' ? undefined : value as any, page: 1 }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="All statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="approved">Approved</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
@@ -310,15 +310,15 @@ export const PendingRequests = () => {
 
             <div className="space-y-2">
               <Label>Provider</Label>
-              <Select
-                value={filters.provider || ''}
-                onValueChange={(value) => setFilters(prev => ({ ...prev, provider: value, page: 1 }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All providers" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All providers</SelectItem>
+            <Select
+              value={filters.provider || 'all'}
+              onValueChange={(value) => setFilters(prev => ({ ...prev, provider: value === 'all' ? undefined : value, page: 1 }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="All providers" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All providers</SelectItem>
                   <SelectItem value="local_password">Email & Password</SelectItem>
                   <SelectItem value="email_otp">Email OTP</SelectItem>
                   <SelectItem value="google">Google</SelectItem>
@@ -526,12 +526,12 @@ export const PendingRequests = () => {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Default Role (Optional)</Label>
-              <Select value={defaultRoleId} onValueChange={setDefaultRoleId}>
+              <Select value={defaultRoleId || 'none'} onValueChange={(value) => setDefaultRoleId(value === 'none' ? '' : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select default role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No role assignment</SelectItem>
+                  <SelectItem value="none">No role assignment</SelectItem>
                   <SelectItem value="user">User</SelectItem>
                   <SelectItem value="viewer">Viewer</SelectItem>
                   <SelectItem value="editor">Editor</SelectItem>
