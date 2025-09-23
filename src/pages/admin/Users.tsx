@@ -52,6 +52,7 @@ export default function Users() {
     limit: 20
   });
   const [selectedUser, setSelectedUser] = useState<UserWithLoginModes | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: usersData, isLoading, error } = useQuery({
@@ -173,6 +174,9 @@ export default function Users() {
             Manage user accounts and authentication methods
           </p>
         </div>
+        <Button onClick={() => setShowCreateModal(true)}>
+          Add User
+        </Button>
       </div>
 
       {/* Filters */}
@@ -459,7 +463,7 @@ export default function Users() {
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
         onSuccess={() => {
-          fetchUsers();
+          queryClient.invalidateQueries({ queryKey: ['users'] });
           toast({
             title: "Success",
             description: "User created successfully"

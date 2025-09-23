@@ -240,6 +240,18 @@ class AuthAPIClient {
     });
   }
 
+  async createUser(data: {
+    email: string;
+    display_name: string;
+    password?: string;
+    is_admin?: boolean;
+  }): Promise<User> {
+    return this.request<User>('/v1/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
   // Audit endpoints
 
   async getAuditLogs(filters?: AuditLogFilters): Promise<PaginatedResponse<AuditLog>> {

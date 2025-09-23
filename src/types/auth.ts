@@ -180,6 +180,7 @@ export interface UserFilters {
   isApproved?: boolean;
   provider?: string;
   search?: string;
+  q?: string;
   page?: number;
   limit?: number;
 }
