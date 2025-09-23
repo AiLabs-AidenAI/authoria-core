@@ -176,3 +176,28 @@ def check_rate_limit(key: str, limit: int, window_minutes: int = 1):
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Rate limit exceeded"
         )
+
+
+def create_tokens(user_id, email: str, scope: str = ""):
+    """Create access and refresh tokens"""
+    access_token = TokenManager.create_access_token(
+        data={"sub": str(user_id), "email": email, "scope": scope}
+    )
+    refresh_token = TokenManager.create_refresh_token()
+    return access_token, refresh_token
+
+
+def verify_token(token: str):
+    """Verify JWT token and return payload"""
+    return TokenManager.verify_token(token)
+
+
+def hash_refresh_token(token: str) -> str:
+    """Hash refresh token for storage"""
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+async def rate_limit(action: str, identifier: str, limit: int, window: int):
+    """Async rate limiting function"""
+    key = f"{action}:{identifier}"
+    check_rate_limit(key, limit, window)

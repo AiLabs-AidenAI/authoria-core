@@ -44,6 +44,7 @@ import { authAPI, getProviderIcon } from '@/lib/api-client';
 import { UserWithLoginModes, UserFilters } from '@/types/auth';
 import { toast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/Layout/AppLayout';
+import { CreateUserModal } from '@/components/admin/CreateUserModal';
 
 export default function Users() {
   const [filters, setFilters] = useState<UserFilters>({
@@ -453,6 +454,18 @@ export default function Users() {
           </div>
         </div>
       )}
+
+      <CreateUserModal 
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        onSuccess={() => {
+          fetchUsers();
+          toast({
+            title: "Success",
+            description: "User created successfully"
+          });
+        }}
+      />
       </div>
     </AppLayout>
   );
