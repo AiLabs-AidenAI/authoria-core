@@ -8,8 +8,9 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
-import AuthConfig from "./pages/admin/AuthConfig";
-import PendingRequests from "./pages/admin/PendingRequests";
+import AuthConfig from "@/pages/admin/AuthConfig";
+import PendingRequests from "@/pages/admin/PendingRequests";
+import Users from "@/pages/admin/Users";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -25,8 +26,9 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/admin/auth-config" element={<AuthConfig />} />
-            <Route path="/admin/pending-requests" element={<PendingRequests />} />
+          <Route path="/admin/auth-config" element={<AuthConfig />} />
+          <Route path="/admin/pending-requests" element={<PendingRequests />} />
+          <Route path="/admin/users" element={<Users />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
