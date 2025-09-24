@@ -6,7 +6,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Shield, Settings, Users, ArrowRight } from 'lucide-react';
+import { Shield, Settings, Users, ArrowRight, Building2 } from 'lucide-react';
 
 const Index = () => {
   return (
@@ -66,6 +66,23 @@ const Index = () => {
                 <CardContent>
                   <CardDescription>
                     Review and approve user registration requests and access permissions
+                  </CardDescription>
+                </CardContent>
+              </Link>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <Link to="/admin/tenants">
+                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                  <div className="flex items-center space-x-2 flex-1">
+                    <Building2 className="h-5 w-5 text-primary" />
+                    <CardTitle className="text-lg">Organizations</CardTitle>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>
+                    Manage tenant organizations and their authentication settings
                   </CardDescription>
                 </CardContent>
               </Link>

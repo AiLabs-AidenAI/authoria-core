@@ -2,7 +2,7 @@
  * Signup page for new user registration
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,12 +40,22 @@ export const Signup = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Mock tenant data - in real app, this would be fetched from API
-  const mockTenants = [
-    { id: '1', name: 'Acme Corporation' },
-    { id: '2', name: 'TechStart Inc.' },
-    { id: '3', name: 'Global Solutions Ltd.' }
-  ];
+  const [tenants, setTenants] = useState<Array<{id: string, name: string}>>([]);
+
+  // Load tenants on component mount
+  useEffect(() => {
+    const loadTenants = async () => {
+      try {
+        const tenantsData = await authAPI.getTenants();
+        setTenants(tenantsData);
+      } catch (error) {
+        console.error('Failed to load tenants:', error);
+        // Fallback to basic default
+        setTenants([{ id: '1', name: 'System Default' }]);
+      }
+    };
+    loadTenants();
+  }, []);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -190,7 +200,7 @@ export const Signup = () => {
                       <SelectValue placeholder="Select your organization" />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockTenants.map((tenant) => (
+                    {tenants.map((tenant) => (
                         <SelectItem key={tenant.id} value={tenant.id}>
                           {tenant.name}
                         </SelectItem>
@@ -287,7 +297,7 @@ export const Signup = () => {
                     <SelectValue placeholder="Select your organization" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockTenants.map((tenant) => (
+                    {tenants.map((tenant) => (
                       <SelectItem key={tenant.id} value={tenant.id}>
                         {tenant.name}
                       </SelectItem>

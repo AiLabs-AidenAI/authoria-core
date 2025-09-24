@@ -395,6 +395,31 @@ class AuthAPIClient {
     });
   }
 
+  // Tenant management API
+  async getTenants(): Promise<any[]> {
+    return this.request<any[]>('/v1/tenants/');
+  }
+
+  async createTenant(data: any): Promise<any> {
+    return this.request<any>('/v1/tenants/', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async updateTenant(id: string, data: any): Promise<any> {
+    return this.request<any>(`/v1/tenants/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteTenant(id: string): Promise<MessageResponse> {
+    return this.request<MessageResponse>(`/v1/tenants/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
   // Bulk operations
 
   async exportPendingSignups(filters?: PendingSignupFilters): Promise<Blob> {

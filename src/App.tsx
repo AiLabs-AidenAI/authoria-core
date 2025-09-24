@@ -15,6 +15,7 @@ import AuthConfig from "@/pages/admin/AuthConfig";
 import PendingRequests from "@/pages/admin/PendingRequests";
 import Users from "@/pages/admin/Users";
 import AuditLog from "@/pages/admin/AuditLog";
+import TenantsManagement from "@/pages/admin/TenantsManagement";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -57,6 +58,11 @@ const App = () => (
             <Route path="/admin/audit-log" element={
               <ProtectedRoute>
                 <AuditLog />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/tenants" element={
+              <ProtectedRoute>
+                <TenantsManagement />
               </ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />

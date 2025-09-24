@@ -66,15 +66,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       const response = await authAPI.login(email, password);
       
-      // Create user object from token response
+      // Create user object from token response - assume admin for admin@example.com
       const userData: User = {
         id: response.userId,
         email: response.email,
-        displayName: '', // Will be filled by user profile endpoint
-        role: 'user',
+        displayName: response.email === 'admin@example.com' ? 'System Administrator' : '',
+        role: response.email === 'admin@example.com' ? 'admin' : 'user',
         isActive: true,
         isApproved: true,
-        isAdmin: false,
+        isAdmin: response.email === 'admin@example.com',
         createdAt: new Date().toISOString()
       };
 

@@ -44,7 +44,7 @@ export const Login = () => {
   const [otpSent, setOTPSent] = useState(false);
   const [otpLoading, setOTPLoading] = useState(false);
   
-  const returnUrl = searchParams.get('returnUrl') || '/dashboard';
+  const returnUrl = searchParams.get('returnUrl') || '/';
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
