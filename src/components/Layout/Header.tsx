@@ -58,6 +58,12 @@ export function Header({ title = "Authentication Service" }: HeaderProps) {
                     Documentation
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/integration-guide">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Integration Guide
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link to="/admin/auth-config">

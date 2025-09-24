@@ -11,6 +11,7 @@ import Signup from "./pages/auth/Signup";
 import SignupSuccess from "./pages/auth/SignupSuccess";
 import PendingApproval from "./pages/auth/PendingApproval";
 import Documentation from "./pages/Documentation";
+import IntegrationGuide from "./pages/IntegrationGuide";
 import AuthConfig from "@/pages/admin/AuthConfig";
 import PendingRequests from "@/pages/admin/PendingRequests";
 import Users from "@/pages/admin/Users";
@@ -38,6 +39,11 @@ const App = () => (
             <Route path="/documentation" element={
               <ProtectedRoute>
                 <Documentation />
+              </ProtectedRoute>
+            } />
+            <Route path="/integration-guide" element={
+              <ProtectedRoute>
+                <IntegrationGuide />
               </ProtectedRoute>
             } />
             <Route path="/admin/auth-config" element={
