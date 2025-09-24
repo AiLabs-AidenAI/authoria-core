@@ -110,7 +110,7 @@ class AuthService:
             
             # Log audit event
             await self._log_audit(
-                db, "signup_requested", "pending_signup", pending_signup.id,
+                db, admin_user_id, "signup_requested", "pending_signup", pending_signup.id,
                 {"email": email, "provider": provider, "ip": ip_address}
             )
             
@@ -417,9 +417,9 @@ class AuthService:
         
         return True
 
-    async def _log_audit(self, db: AsyncSession, action_type: str, target_type: str,
-                        target_id: uuid.UUID, payload: Dict[str, Any] = None,
-                        actor_user_id: uuid.UUID = None, ip_address: str = None):
+    async def _log_audit(self, db: AsyncSession, actor_user_id: uuid.UUID, action_type: str, 
+                        target_type: str, target_id: uuid.UUID, payload: Dict[str, Any] = None,
+                        ip_address: str = None):
         """Log audit event"""
         audit_log = AuditLog(
             actor_user_id=actor_user_id,
@@ -841,11 +841,166 @@ class AuthService:
             )
             recent_logins = recent_logins_result.scalar()
             
-            return {
-                'total_users': total_users,
-                'active_users': active_users,
-                'pending_signups': pending_signups,
-                'recent_logins_7d': recent_logins,
-                'system_status': 'healthy'
+    async def get_user_by_id(self, user_id: uuid.UUID) -> Optional[Dict[str, Any]]:
+        """Get user by ID"""
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(User).where(User.id == user_id)
+            )
+            user = result.scalar_one_or_none()
+            
+            if not user:
+                return None
+            
+            # Get provider links
+            provider_result = await db.execute(
+                select(AuthProviderLink).where(AuthProviderLink.user_id == user_id)
+            )
+            providers = provider_result.scalars().all()
+            
+            login_modes = {
+                'password': any(p.provider_name == 'local_password' and p.is_enabled for p in providers),
+                'otp': any(p.provider_name == 'email_otp' and p.is_enabled for p in providers),
+                'google': any(p.provider_name == 'google' and p.is_enabled for p in providers),
+                'azure': any(p.provider_name == 'azure' and p.is_enabled for p in providers),
             }
+            
+            return {
+                'id': str(user.id),
+                'email': user.email,
+                'display_name': user.display_name,
+                'is_active': user.is_active,
+                'is_approved': user.is_approved,
+                'is_admin': user.is_admin,
+                'created_at': user.created_at.isoformat(),
+                'last_login': user.last_login.isoformat() if user.last_login else None,
+                'login_modes': login_modes,
+                'providers': [
+                    {
+                        'provider_name': p.provider_name,
+                        'is_enabled': p.is_enabled,
+                        'linked_at': p.linked_at.isoformat()
+                    } for p in providers
+                ]
+            }
+
+    async def update_user(self, user_id: uuid.UUID, display_name: str = None,
+                         is_admin: bool = None, is_approved: bool = None,
+                         updated_by: uuid.UUID = None) -> Optional[Dict[str, Any]]:
+        """Update user information"""
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(User).where(User.id == user_id)
+            )
+            user = result.scalar_one_or_none()
+            
+            if not user:
+                return None
+            
+            # Update fields
+            if display_name is not None:
+                user.display_name = display_name
+            if is_admin is not None:
+                user.is_admin = is_admin
+            if is_approved is not None:
+                user.is_approved = is_approved
+            
+            user.updated_at = datetime.utcnow()
+            
+            # Log audit event
+            await self._log_audit(
+                db, updated_by, "user_updated", "user", user_id,
+                {
+                    "display_name": display_name,
+                    "is_admin": is_admin,
+                    "is_approved": is_approved,
+                    "email": user.email
+                }
+            )
+            
+            await db.commit()
+            await db.refresh(user)
+            
+            return await self.get_user_by_id(user_id)
+
+    async def delete_user(self, user_id: uuid.UUID, deleted_by: uuid.UUID) -> bool:
+        """Delete user"""
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(User).where(User.id == user_id)
+            )
+            user = result.scalar_one_or_none()
+            
+            if not user:
+                return False
+            
+            # Log audit event before deletion
+            await self._log_audit(
+                db, deleted_by, "user_deleted", "user", user_id,
+                {"email": user.email}
+            )
+            
+            await db.delete(user)
+            await db.commit()
+            return True
+
+    async def link_provider_to_user(self, user_id: uuid.UUID, provider: str) -> AuthResult:
+        """Link authentication provider to user"""
+        async with AsyncSessionLocal() as db:
+            # Check if user exists
+            result = await db.execute(
+                select(User).where(User.id == user_id)
+            )
+            user = result.scalar_one_or_none()
+            
+            if not user:
+                return AuthResult(False, error_message="User not found")
+            
+            # Check if provider already linked
+            existing_result = await db.execute(
+                select(AuthProviderLink).where(
+                    and_(
+                        AuthProviderLink.user_id == user_id,
+                        AuthProviderLink.provider_name == provider
+                    )
+                )
+            )
+            existing_link = existing_result.scalar_one_or_none()
+            
+            if existing_link:
+                existing_link.is_enabled = True
+            else:
+                new_link = AuthProviderLink(
+                    user_id=user_id,
+                    provider_name=provider,
+                    is_enabled=True,
+                    metadata={"linked_manually": True}
+                )
+                db.add(new_link)
+            
+            await db.commit()
+            
+            return AuthResult(True)
+
+    async def unlink_provider_from_user(self, user_id: uuid.UUID, provider: str) -> AuthResult:
+        """Unlink authentication provider from user"""
+        async with AsyncSessionLocal() as db:
+            # Check if provider is linked
+            result = await db.execute(
+                select(AuthProviderLink).where(
+                    and_(
+                        AuthProviderLink.user_id == user_id,
+                        AuthProviderLink.provider_name == provider
+                    )
+                )
+            )
+            provider_link = result.scalar_one_or_none()
+            
+            if not provider_link:
+                return AuthResult(False, error_message="Provider not linked to user")
+            
+            provider_link.is_enabled = False
+            await db.commit()
+            
+            return AuthResult(True)
 

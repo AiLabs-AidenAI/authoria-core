@@ -90,7 +90,8 @@ async def setup_database():
                     is_admin=True,
                     is_approved=True,
                     is_active=True,
-                    email_verified=True
+                    email_verified=True,
+                    role="admin"
                 )
                 
                 db.add(admin_user)

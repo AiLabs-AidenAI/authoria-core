@@ -7,7 +7,15 @@ from typing import Dict, Any, Optional
 from urllib.parse import urlencode
 import logging
 
-from app.providers.base import AuthProvider, ProviderType, ProviderStartResult, ProviderCompleteResult, NormalizedUser, LinkAccountResult
+from .base import (
+    AuthProvider, 
+    ProviderType, 
+    ProviderStartResult, 
+    ProviderCompleteResult, 
+    NormalizedUser,
+    LinkAccountResult
+)
+import uuid
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -22,10 +30,6 @@ class AzureOAuthProvider(AuthProvider):
         self.client_secret = self.config.get("client_secret") 
         self.redirect_uri = self.config.get("redirect_uri")
         self._enabled = bool(self.client_id and self.client_secret and self.redirect_uri)
-
-    @property
-    def provider_id(self) -> str:
-        return "azure"
 
     @property
     def provider_id(self) -> str:

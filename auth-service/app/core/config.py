@@ -54,6 +54,9 @@ class Settings(BaseSettings):
     OTP_LENGTH: int = 6
     OTP_EXPIRE_MINUTES: int = 10
     
+    # Service URL
+    BASE_URL: str = "http://localhost:8000"
+    
     # RBAC service integration
     RBAC_SERVICE_URL: str = "http://localhost:8001"
     RBAC_SERVICE_TOKEN: str = ""

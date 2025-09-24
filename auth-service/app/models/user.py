@@ -4,12 +4,12 @@ Database models for authentication service
 
 from sqlalchemy import Column, String, Boolean, DateTime, Text, ForeignKey, Index
 from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.ext.declarative import declarative_base
+from app.core.database import Base
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
 
-Base = declarative_base()
+
 
 class User(Base):
     __tablename__ = "users"
@@ -18,10 +18,14 @@ class User(Base):
     tenant_id = Column(UUID(as_uuid=True), nullable=True)  # For multi-tenant support
     email = Column(String(255), unique=True, nullable=False, index=True)
     display_name = Column(String(255), nullable=False)
+    first_name = Column(String(100), nullable=True)
+    last_name = Column(String(100), nullable=True)
     password_hash = Column(String(255), nullable=True)  # Nullable for SSO-only users
+    role = Column(String(50), default="user")
     is_active = Column(Boolean, default=False)
     is_approved = Column(Boolean, default=False)
     is_admin = Column(Boolean, default=False)
+    email_verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
@@ -89,6 +93,7 @@ class RefreshToken(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=False)
     revoked_at = Column(DateTime, nullable=True)
+    revoked = Column(Boolean, default=False)
     replaced_by = Column(UUID(as_uuid=True), nullable=True)  # Points to new token in rotation
     device_info = Column(JSONB, default=dict)  # User agent, IP, etc.
     
