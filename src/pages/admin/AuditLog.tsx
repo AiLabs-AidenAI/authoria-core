@@ -10,8 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, Search, Filter, Download, Eye, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
-import { authAPI, AuditLogFilters } from '@/lib/api-client';
-import { AuditLog } from '@/types/auth';
+import { authAPI } from '@/lib/api-client';
+import { AuditLog, AuditLogFilters } from '@/types/auth';
 import { toast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/Layout/AppLayout';
 
@@ -84,20 +84,30 @@ export const AuditLogPage = () => {
           id: '1',
           timestamp: new Date().toISOString(),
           event_type: 'user_login',
+          actionType: 'user_login',
+          targetType: 'user',
           user_email: 'admin@example.com',
           ip_address: '192.168.1.1',
+          ipAddress: '192.168.1.1',
           user_agent: 'Mozilla/5.0...',
+          userAgent: 'Mozilla/5.0...',
           details: { provider: 'local_password' },
+          payload: { provider: 'local_password' },
           severity: 'success'
         },
         {
           id: '2',
           timestamp: new Date(Date.now() - 3600000).toISOString(),
           event_type: 'config_change',
+          actionType: 'config_change',
+          targetType: 'system',
           user_email: 'admin@example.com',
           ip_address: '192.168.1.1',
+          ipAddress: '192.168.1.1',
           user_agent: 'Mozilla/5.0...',
+          userAgent: 'Mozilla/5.0...',
           details: { config_key: 'oauth_provider', action: 'updated' },
+          payload: { config_key: 'oauth_provider', action: 'updated' },
           severity: 'info'
         }
       ]);

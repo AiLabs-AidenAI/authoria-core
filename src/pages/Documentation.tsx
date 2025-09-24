@@ -302,7 +302,7 @@ npm run dev
                       <div className="border rounded-lg p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <Badge variant="outline">GET</Badge>
-                          <code className="text-sm">/v1/auth/oauth/{provider}/start</code>
+                          <code className="text-sm">/v1/auth/oauth/&#123;provider&#125;/start</code>
                         </div>
                         <p className="text-sm text-muted-foreground">Start OAuth flow (google, azure)</p>
                       </div>
@@ -333,7 +333,7 @@ npm run dev
                       <div className="border rounded-lg p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <Badge variant="default">POST</Badge>
-                          <code className="text-sm">/v1/admin/pending-signups/{id}/approve</code>
+                          <code className="text-sm">/v1/admin/pending-signups/&#123;id&#125;/approve</code>
                         </div>
                         <p className="text-sm text-muted-foreground">Approve user signup request</p>
                       </div>

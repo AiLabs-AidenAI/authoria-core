@@ -78,6 +78,13 @@ export interface AuditLog {
   ipAddress?: string;
   userAgent?: string;
   timestamp: string;
+  // Extended properties for UI compatibility
+  event_type?: string;
+  user_email?: string;  
+  ip_address?: string;
+  user_agent?: string;
+  details?: Record<string, any>;
+  severity?: 'info' | 'warning' | 'error' | 'success';
 }
 
 // API Request/Response Types
@@ -191,6 +198,9 @@ export interface AuditLogFilters {
   targetType?: string;
   startDate?: string;
   endDate?: string;
+  search?: string;
+  event_type?: string;
+  severity?: string;
   page?: number;
   limit?: number;
 }
