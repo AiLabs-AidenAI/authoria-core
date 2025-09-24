@@ -273,21 +273,100 @@ class AuthAPIClient {
 
   // Provider management
 
-  async getAuthProviders(): Promise<AuthProvider[]> {
-    return this.request<AuthProvider[]>('/v1/admin/providers');
+  // Auth Config CRUD operations
+  
+  async getAuthProviders(): Promise<any[]> {
+    return this.request<any[]>('/v1/admin/config/providers');
   }
 
-  async updateProviderConfig(providerId: string, config: any): Promise<MessageResponse> {
-    return this.request<MessageResponse>(`/v1/admin/providers/${providerId}/config`, {
-      method: 'PUT',
-      body: JSON.stringify(config)
+  async createAuthProvider(data: any): Promise<any> {
+    return this.request<any>('/v1/admin/config/providers', {
+      method: 'POST',
+      body: JSON.stringify(data)
     });
   }
 
-  async toggleProvider(providerId: string, enabled: boolean): Promise<MessageResponse> {
-    return this.request<MessageResponse>(`/v1/admin/providers/${providerId}/toggle`, {
+  async updateAuthProvider(id: string, data: any): Promise<any> {
+    return this.request<any>(`/v1/admin/config/providers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteAuthProvider(id: string): Promise<MessageResponse> {
+    return this.request<MessageResponse>(`/v1/admin/config/providers/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // SMTP Config operations
+  
+  async getSMTPConfigs(): Promise<any[]> {
+    return this.request<any[]>('/v1/admin/config/smtp');
+  }
+
+  async createSMTPConfig(data: any): Promise<any> {
+    return this.request<any>('/v1/admin/config/smtp', {
       method: 'POST',
-      body: JSON.stringify({ enabled })
+      body: JSON.stringify(data)
+    });
+  }
+
+  async updateSMTPConfig(id: string, data: any): Promise<any> {
+    return this.request<any>(`/v1/admin/config/smtp/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteSMTPConfig(id: string): Promise<MessageResponse> {
+    return this.request<MessageResponse>(`/v1/admin/config/smtp/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Client Application operations
+  
+  async getClientApplications(): Promise<any[]> {
+    return this.request<any[]>('/v1/admin/config/clients');
+  }
+
+  async createClientApplication(data: any): Promise<any> {
+    return this.request<any>('/v1/admin/config/clients', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async updateClientApplication(id: string, data: any): Promise<any> {
+    return this.request<any>(`/v1/admin/config/clients/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteClientApplication(id: string): Promise<MessageResponse> {
+    return this.request<MessageResponse>(`/v1/admin/config/clients/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async regenerateClientSecret(id: string): Promise<{client_secret: string}> {
+    return this.request<{client_secret: string}>(`/v1/admin/config/clients/${id}/regenerate-secret`, {
+      method: 'POST'
+    });
+  }
+
+  // Auth Settings operations
+  
+  async getAuthSettings(): Promise<any> {
+    return this.request<any>('/v1/admin/config/settings');
+  }
+
+  async updateAuthSettings(data: any): Promise<any> {
+    return this.request<any>('/v1/admin/config/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data)
     });
   }
 

@@ -2,7 +2,7 @@
  * Authentication Configuration Page
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -13,24 +13,26 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Settings, Shield, Mail, Users, Key, Trash2, Copy, Eye, EyeOff } from 'lucide-react';
+import { Plus, Settings, Shield, Mail, Users, Key, Trash2, Copy, Eye, EyeOff, Building2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AppLayout } from '@/components/Layout/AppLayout';
+import { authAPI } from '@/lib/api-client';
 
 interface AuthProvider {
   id: string;
   name: string;
-  displayName: string;
-  providerType: string;
-  clientId?: string;
-  clientSecret?: string;
-  authorizationUrl?: string;
-  tokenUrl?: string;
-  userinfoUrl?: string;
+  display_name: string;
+  provider_type: string;
+  client_id?: string;
+  client_secret?: string;
+  authorization_url?: string;
+  token_url?: string;
+  userinfo_url?: string;
   scope: string;
-  autoApproveDomains: string[];
-  requireEmailVerification: boolean;
+  auto_approve_domains: string[];
+  require_email_verification: boolean;
   enabled: boolean;
-  iconUrl?: string;
+  icon_url?: string;
   description?: string;
 }
 
@@ -41,33 +43,31 @@ interface SMTPConfig {
   port: number;
   username?: string;
   password?: string;
-  useTls: boolean;
-  useSsl: boolean;
-  fromEmail: string;
-  fromName?: string;
-  replyTo?: string;
-  maxEmailsPerHour: number;
+  use_tls: boolean;
+  use_ssl: boolean;
+  from_email: string;
+  from_name?: string;
+  reply_to?: string;
+  max_emails_per_hour: number;
   enabled: boolean;
-  isDefault: boolean;
+  is_default: boolean;
 }
 
 interface ClientApplication {
   id: string;
   name: string;
   description?: string;
-  clientId: string;
-  clientSecret: string;
-  redirectUris: string[];
-  allowedOrigins: string[];
-  allowedScopes: string[];
-  allowedGrantTypes: string[];
+  client_id: string;
+  client_secret: string;
+  redirect_uris: string[];
+  allowed_origins: string[];
+  allowed_scopes: string[];
+  allowed_grant_types: string[];
   enabled: boolean;
-  logoUrl?: string;
-  websiteUrl?: string;
-  contactEmail?: string;
+  logo_url?: string;
+  website_url?: string;
+  contact_email?: string;
 }
-
-import { AppLayout } from '@/components/Layout/AppLayout';
 
 const AuthConfig: React.FC = () => {
   const [activeTab, setActiveTab] = useState('providers');
@@ -75,64 +75,127 @@ const AuthConfig: React.FC = () => {
   const [newProviderOpen, setNewProviderOpen] = useState(false);
   const [newSMTPOpen, setNewSMTPOpen] = useState(false);
   const [newClientOpen, setNewClientOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data - replace with actual API calls
-  const [authProviders, setAuthProviders] = useState<AuthProvider[]>([
-    {
-      id: '1',
-      name: 'google',
-      displayName: 'Google OAuth',
-      providerType: 'oauth2',
-      clientId: 'your-google-client-id',
-      clientSecret: 'your-google-client-secret',
-      authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
-      tokenUrl: 'https://oauth2.googleapis.com/token',
-      userinfoUrl: 'https://www.googleapis.com/oauth2/v2/userinfo',
+  // State for actual data from API
+  const [authProviders, setAuthProviders] = useState<AuthProvider[]>([]);
+  const [smtpConfigs, setSMTPConfigs] = useState<SMTPConfig[]>([]);
+  const [clientApps, setClientApps] = useState<ClientApplication[]>([]);
+  const [authSettings, setAuthSettings] = useState<any>({});
+
+  // Form states
+  const [newProvider, setNewProvider] = useState({
+    name: '',
+    display_name: '',
+    provider_type: 'oauth2',
+    client_id: '',
+    client_secret: '',
+    authorization_url: '',
+    token_url: '',
+    userinfo_url: '',
+    scope: 'openid profile email',
+    auto_approve_domains: '',
+    require_email_verification: true,
+    enabled: false,
+    icon_url: '',
+    description: ''
+  });
+
+  const [newSMTP, setNewSMTP] = useState({
+    name: '',
+    host: '',
+    port: 587,
+    username: '',
+    password: '',
+    use_tls: true,
+    use_ssl: false,
+    from_email: '',
+    from_name: '',
+    reply_to: '',
+    max_emails_per_hour: 100,
+    enabled: false,
+    is_default: false
+  });
+
+  const [newClient, setNewClient] = useState({
+    name: '',
+    description: '',
+    redirect_uris: '',
+    allowed_origins: '',
+    allowed_scopes: 'openid,profile,email',
+    allowed_grant_types: 'authorization_code,refresh_token',
+    enabled: true,
+    logo_url: '',
+    website_url: '',
+    contact_email: ''
+  });
+
+  // Load data on component mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [providers, smtp, clients, settings] = await Promise.all([
+        authAPI.getAuthProviders(),
+        authAPI.getSMTPConfigs(),
+        authAPI.getClientApplications(),
+        authAPI.getAuthSettings()
+      ]);
+
+      setAuthProviders(providers);
+      setSMTPConfigs(smtp);
+      setClientApps(clients);
+      setAuthSettings(settings);
+
+      // If no Microsoft provider exists, create one as default
+      const hasAzure = providers.some(p => p.provider_type === 'azure');
+      if (!hasAzure) {
+        await createDefaultAzureProvider();
+      }
+    } catch (error) {
+      console.error('Failed to load config data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load configuration data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createDefaultAzureProvider = async () => {
+    const azureProvider = {
+      name: 'azure',
+      display_name: 'Microsoft Azure AD',
+      provider_type: 'azure',
+      client_id: '',
+      client_secret: '',
+      authorization_url: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+      token_url: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+      userinfo_url: 'https://graph.microsoft.com/v1.0/me',
       scope: 'openid profile email',
-      autoApproveDomains: ['company.com'],
-      requireEmailVerification: true,
-      enabled: true,
-      iconUrl: 'https://developers.google.com/identity/images/g-logo.png',
-      description: 'Sign in with Google account'
-    }
-  ]);
+      auto_approve_domains: [],
+      require_email_verification: true,
+      enabled: false,
+      icon_url: 'https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg',
+      description: 'Sign in with Microsoft Azure AD'
+    };
 
-  const [smtpConfigs, setSMTPConfigs] = useState<SMTPConfig[]>([
-    {
-      id: '1',
-      name: 'Primary SMTP',
-      host: 'smtp.gmail.com',
-      port: 587,
-      username: 'auth@company.com',
-      password: 'app-password',
-      useTls: true,
-      useSsl: false,
-      fromEmail: 'auth@company.com',
-      fromName: 'Auth Service',
-      replyTo: 'noreply@company.com',
-      maxEmailsPerHour: 100,
-      enabled: true,
-      isDefault: true
+    try {
+      const created = await authAPI.createAuthProvider(azureProvider);
+      setAuthProviders(prev => [...prev, created]);
+      toast({
+        title: "Microsoft SSO Added",
+        description: "Microsoft Azure AD provider has been configured as the main SSO option",
+      });
+    } catch (error) {
+      console.error('Failed to create Azure provider:', error);
     }
-  ]);
-
-  const [clientApps, setClientApps] = useState<ClientApplication[]>([
-    {
-      id: '1',
-      name: 'Web Application',
-      description: 'Main web application',
-      clientId: 'client_web_app_123',
-      clientSecret: 'secret_456',
-      redirectUris: ['https://app.company.com/auth/callback'],
-      allowedOrigins: ['https://app.company.com'],
-      allowedScopes: ['openid', 'profile', 'email'],
-      allowedGrantTypes: ['authorization_code', 'refresh_token'],
-      enabled: true,
-      logoUrl: 'https://app.company.com/logo.png',
-      websiteUrl: 'https://app.company.com',
-      contactEmail: 'admin@company.com'
-    }
-  ])
+  };
 
   const togglePasswordVisibility = (id: string) => {
     setShowPassword(prev => ({...prev, [id]: !prev[id]}));
@@ -146,16 +209,194 @@ const AuthConfig: React.FC = () => {
     });
   };
 
+  const handleCreateProvider = async () => {
+    try {
+      const providerData = {
+        ...newProvider,
+        auto_approve_domains: newProvider.auto_approve_domains.split(',').map(d => d.trim()).filter(d => d)
+      };
+      
+      const created = await authAPI.createAuthProvider(providerData);
+      setAuthProviders(prev => [...prev, created]);
+      setNewProviderOpen(false);
+      setNewProvider({
+        name: '',
+        display_name: '',
+        provider_type: 'oauth2',
+        client_id: '',
+        client_secret: '',
+        authorization_url: '',
+        token_url: '',
+        userinfo_url: '',
+        scope: 'openid profile email',
+        auto_approve_domains: '',
+        require_email_verification: true,
+        enabled: false,
+        icon_url: '',
+        description: ''
+      });
+      
+      toast({
+        title: "Provider created",
+        description: "New authentication provider has been created successfully."
+      });
+    } catch (error) {
+      console.error('Failed to create provider:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create provider",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleCreateSMTP = async () => {
+    try {
+      const created = await authAPI.createSMTPConfig(newSMTP);
+      setSMTPConfigs(prev => [...prev, created]);
+      setNewSMTPOpen(false);
+      setNewSMTP({
+        name: '',
+        host: '',
+        port: 587,
+        username: '',
+        password: '',
+        use_tls: true,
+        use_ssl: false,
+        from_email: '',
+        from_name: '',
+        reply_to: '',
+        max_emails_per_hour: 100,
+        enabled: false,
+        is_default: false
+      });
+      
+      toast({
+        title: "SMTP Config created",
+        description: "New SMTP configuration has been created successfully."
+      });
+    } catch (error) {
+      console.error('Failed to create SMTP config:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create SMTP configuration",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleCreateClient = async () => {
+    try {
+      const clientData = {
+        ...newClient,
+        redirect_uris: newClient.redirect_uris.split(',').map(u => u.trim()).filter(u => u),
+        allowed_origins: newClient.allowed_origins.split(',').map(o => o.trim()).filter(o => o),
+        allowed_scopes: newClient.allowed_scopes.split(',').map(s => s.trim()).filter(s => s),
+        allowed_grant_types: newClient.allowed_grant_types.split(',').map(g => g.trim()).filter(g => g)
+      };
+      
+      const created = await authAPI.createClientApplication(clientData);
+      setClientApps(prev => [...prev, created]);
+      setNewClientOpen(false);
+      setNewClient({
+        name: '',
+        description: '',
+        redirect_uris: '',
+        allowed_origins: '',
+        allowed_scopes: 'openid,profile,email',
+        allowed_grant_types: 'authorization_code,refresh_token',
+        enabled: true,
+        logo_url: '',
+        website_url: '',
+        contact_email: ''
+      });
+      
+      toast({
+        title: "Client App created",
+        description: "New client application has been created successfully."
+      });
+    } catch (error) {
+      console.error('Failed to create client app:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create client application",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteProvider = async (id: string) => {
+    try {
+      await authAPI.deleteAuthProvider(id);
+      setAuthProviders(prev => prev.filter(p => p.id !== id));
+      toast({
+        title: "Provider deleted",
+        description: "Authentication provider has been deleted successfully."
+      });
+    } catch (error) {
+      console.error('Failed to delete provider:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete provider",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteSMTP = async (id: string) => {
+    try {
+      await authAPI.deleteSMTPConfig(id);
+      setSMTPConfigs(prev => prev.filter(s => s.id !== id));
+      toast({
+        title: "SMTP Config deleted",
+        description: "SMTP configuration has been deleted successfully."
+      });
+    } catch (error) {
+      console.error('Failed to delete SMTP config:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete SMTP configuration",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteClient = async (id: string) => {
+    try {
+      await authAPI.deleteClientApplication(id);
+      setClientApps(prev => prev.filter(c => c.id !== id));
+      toast({
+        title: "Client App deleted",
+        description: "Client application has been deleted successfully."
+      });
+    } catch (error) {
+      console.error('Failed to delete client app:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete client application",
+        variant: "destructive"
+      });
+    }
+  };
+
   const ProviderCard = ({ provider }: { provider: AuthProvider }) => (
     <Card className="mb-4">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            {provider.iconUrl && (
-              <img src={provider.iconUrl} alt={provider.displayName} className="w-8 h-8" />
+            {provider.provider_type === 'azure' && (
+              <Building2 className="w-8 h-8 text-blue-600" />
+            )}
+            {provider.icon_url && provider.provider_type !== 'azure' && (
+              <img src={provider.icon_url} alt={provider.display_name} className="w-8 h-8" />
             )}
             <div>
-              <CardTitle className="text-lg">{provider.displayName}</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2">
+                {provider.display_name}
+                {provider.provider_type === 'azure' && (
+                  <Badge variant="default" className="bg-blue-600">Main SSO</Badge>
+                )}
+              </CardTitle>
               <CardDescription>{provider.description}</CardDescription>
             </div>
           </div>
@@ -163,7 +404,7 @@ const AuthConfig: React.FC = () => {
             <Badge variant={provider.enabled ? "default" : "secondary"}>
               {provider.enabled ? "Enabled" : "Disabled"}
             </Badge>
-            <Badge variant="outline">{provider.providerType}</Badge>
+            <Badge variant="outline">{provider.provider_type}</Badge>
           </div>
         </div>
       </CardHeader>
@@ -173,14 +414,16 @@ const AuthConfig: React.FC = () => {
             <Label className="text-sm font-medium">Client ID</Label>
             <div className="flex items-center space-x-2 mt-1">
               <Input 
-                value={provider.clientId || ''} 
+                value={provider.client_id || ''} 
                 readOnly 
                 className="font-mono text-sm"
+                placeholder="Not configured"
               />
               <Button 
                 size="sm" 
                 variant="outline"
-                onClick={() => copyToClipboard(provider.clientId || '')}
+                onClick={() => copyToClipboard(provider.client_id || '')}
+                disabled={!provider.client_id}
               >
                 <Copy className="h-4 w-4" />
               </Button>
@@ -192,21 +435,24 @@ const AuthConfig: React.FC = () => {
             <div className="flex items-center space-x-2 mt-1">
               <Input 
                 type={showPassword[provider.id] ? "text" : "password"}
-                value={provider.clientSecret || ''} 
+                value={provider.client_secret ? "••••••••••••••••" : ''} 
                 readOnly 
                 className="font-mono text-sm"
+                placeholder="Not configured"
               />
               <Button 
                 size="sm" 
                 variant="outline"
                 onClick={() => togglePasswordVisibility(provider.id)}
+                disabled={!provider.client_secret}
               >
                 {showPassword[provider.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
               <Button 
                 size="sm" 
                 variant="outline"
-                onClick={() => copyToClipboard(provider.clientSecret || '')}
+                onClick={() => copyToClipboard(provider.client_secret || '')}
+                disabled={!provider.client_secret}
               >
                 <Copy className="h-4 w-4" />
               </Button>
@@ -216,7 +462,7 @@ const AuthConfig: React.FC = () => {
           <div>
             <Label className="text-sm font-medium">Authorization URL</Label>
             <Input 
-              value={provider.authorizationUrl || ''} 
+              value={provider.authorization_url || ''} 
               readOnly 
               className="font-mono text-sm mt-1"
             />
@@ -225,7 +471,7 @@ const AuthConfig: React.FC = () => {
           <div>
             <Label className="text-sm font-medium">Token URL</Label>
             <Input 
-              value={provider.tokenUrl || ''} 
+              value={provider.token_url || ''} 
               readOnly 
               className="font-mono text-sm mt-1"
             />
@@ -243,11 +489,11 @@ const AuthConfig: React.FC = () => {
           <div>
             <Label className="text-sm font-medium">Auto-approve Domains</Label>
             <div className="flex flex-wrap gap-1 mt-1">
-              {provider.autoApproveDomains.map(domain => (
+              {provider.auto_approve_domains?.map(domain => (
                 <Badge key={domain} variant="secondary" className="text-xs">
                   {domain}
                 </Badge>
-              ))}
+              )) || <span className="text-sm text-muted-foreground">None configured</span>}
             </div>
           </div>
         </div>
@@ -259,7 +505,7 @@ const AuthConfig: React.FC = () => {
               <Label className="text-sm">Enabled</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <Switch checked={provider.requireEmailVerification} />
+              <Switch checked={provider.require_email_verification} />
               <Label className="text-sm">Require Email Verification</Label>
             </div>
           </div>
@@ -268,7 +514,7 @@ const AuthConfig: React.FC = () => {
               <Settings className="h-4 w-4 mr-1" />
               Configure
             </Button>
-            <Button variant="destructive" size="sm">
+            <Button variant="destructive" size="sm" onClick={() => handleDeleteProvider(provider.id)}>
               <Trash2 className="h-4 w-4 mr-1" />
               Delete
             </Button>
@@ -290,7 +536,7 @@ const AuthConfig: React.FC = () => {
             <Badge variant={config.enabled ? "default" : "secondary"}>
               {config.enabled ? "Enabled" : "Disabled"}
             </Badge>
-            {config.isDefault && (
+            {config.is_default && (
               <Badge variant="outline">Default</Badge>
             )}
           </div>
@@ -312,7 +558,7 @@ const AuthConfig: React.FC = () => {
           </div>
           <div>
             <Label className="text-sm font-medium">From Email</Label>
-            <Input value={config.fromEmail} readOnly className="mt-1" />
+            <Input value={config.from_email} readOnly className="mt-1" />
           </div>
         </div>
         
@@ -323,11 +569,11 @@ const AuthConfig: React.FC = () => {
               <Label className="text-sm">Enabled</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <Switch checked={config.useTls} />
+              <Switch checked={config.use_tls} />
               <Label className="text-sm">Use TLS</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <Switch checked={config.isDefault} />
+              <Switch checked={config.is_default} />
               <Label className="text-sm">Default</Label>
             </div>
           </div>
@@ -336,7 +582,7 @@ const AuthConfig: React.FC = () => {
               <Settings className="h-4 w-4 mr-1" />
               Configure
             </Button>
-            <Button variant="destructive" size="sm">
+            <Button variant="destructive" size="sm" onClick={() => handleDeleteSMTP(config.id)}>
               <Trash2 className="h-4 w-4 mr-1" />
               Delete
             </Button>
@@ -351,8 +597,8 @@ const AuthConfig: React.FC = () => {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            {client.logoUrl && (
-              <img src={client.logoUrl} alt={client.name} className="w-8 h-8" />
+            {client.logo_url && (
+              <img src={client.logo_url} alt={client.name} className="w-8 h-8" />
             )}
             <div>
               <CardTitle className="text-lg">{client.name}</CardTitle>
@@ -369,11 +615,11 @@ const AuthConfig: React.FC = () => {
           <div>
             <Label className="text-sm font-medium">Client ID</Label>
             <div className="flex items-center space-x-2 mt-1">
-              <Input value={client.clientId} readOnly className="font-mono text-sm" />
+              <Input value={client.client_id} readOnly className="font-mono text-sm" />
               <Button 
                 size="sm" 
                 variant="outline"
-                onClick={() => copyToClipboard(client.clientId)}
+                onClick={() => copyToClipboard(client.client_id)}
               >
                 <Copy className="h-4 w-4" />
               </Button>
@@ -385,7 +631,7 @@ const AuthConfig: React.FC = () => {
             <div className="flex items-center space-x-2 mt-1">
               <Input 
                 type={showPassword[client.id] ? "text" : "password"}
-                value={client.clientSecret} 
+                value="••••••••••••••••" 
                 readOnly 
                 className="font-mono text-sm"
               />
@@ -399,7 +645,7 @@ const AuthConfig: React.FC = () => {
               <Button 
                 size="sm" 
                 variant="outline"
-                onClick={() => copyToClipboard(client.clientSecret)}
+                onClick={() => copyToClipboard(client.client_secret)}
               >
                 <Copy className="h-4 w-4" />
               </Button>
@@ -409,7 +655,7 @@ const AuthConfig: React.FC = () => {
           <div className="col-span-2">
             <Label className="text-sm font-medium">Redirect URIs</Label>
             <div className="flex flex-wrap gap-1 mt-1">
-              {client.redirectUris.map((uri, index) => (
+              {client.redirect_uris.map((uri, index) => (
                 <Badge key={index} variant="secondary" className="text-xs font-mono">
                   {uri}
                 </Badge>
@@ -420,7 +666,7 @@ const AuthConfig: React.FC = () => {
           <div>
             <Label className="text-sm font-medium">Allowed Scopes</Label>
             <div className="flex flex-wrap gap-1 mt-1">
-              {client.allowedScopes.map(scope => (
+              {client.allowed_scopes.map(scope => (
                 <Badge key={scope} variant="outline" className="text-xs">
                   {scope}
                 </Badge>
@@ -431,7 +677,7 @@ const AuthConfig: React.FC = () => {
           <div>
             <Label className="text-sm font-medium">Grant Types</Label>
             <div className="flex flex-wrap gap-1 mt-1">
-              {client.allowedGrantTypes.map(type => (
+              {client.allowed_grant_types.map(type => (
                 <Badge key={type} variant="outline" className="text-xs">
                   {type}
                 </Badge>
@@ -454,7 +700,7 @@ const AuthConfig: React.FC = () => {
               <Settings className="h-4 w-4 mr-1" />
               Configure
             </Button>
-            <Button variant="destructive" size="sm">
+            <Button variant="destructive" size="sm" onClick={() => handleDeleteClient(client.id)}>
               <Trash2 className="h-4 w-4 mr-1" />
               Delete
             </Button>
@@ -463,6 +709,21 @@ const AuthConfig: React.FC = () => {
       </CardContent>
     </Card>
   );
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="container mx-auto p-6 max-w-6xl">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading configuration...</p>
+            </div>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -498,7 +759,7 @@ const AuthConfig: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-semibold">SSO Providers</h2>
-              <p className="text-muted-foreground">Configure OAuth and SAML providers</p>
+              <p className="text-muted-foreground">Configure single sign-on authentication providers</p>
             </div>
             <Dialog open={newProviderOpen} onOpenChange={setNewProviderOpen}>
               <DialogTrigger asChild>
@@ -511,24 +772,135 @@ const AuthConfig: React.FC = () => {
                 <DialogHeader>
                   <DialogTitle>Add SSO Provider</DialogTitle>
                   <DialogDescription>
-                    Configure a new OAuth2, OIDC, or SAML provider
+                    Configure a new single sign-on authentication provider
                   </DialogDescription>
                 </DialogHeader>
-                {/* Add provider form would go here */}
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="provider-name">Provider Name</Label>
+                      <Input
+                        id="provider-name"
+                        placeholder="e.g. azure, google, github"
+                        value={newProvider.name}
+                        onChange={(e) => setNewProvider(prev => ({...prev, name: e.target.value}))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="display-name">Display Name</Label>
+                      <Input
+                        id="display-name"
+                        placeholder="e.g. Microsoft Azure AD"
+                        value={newProvider.display_name}
+                        onChange={(e) => setNewProvider(prev => ({...prev, display_name: e.target.value}))}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="provider-type">Provider Type</Label>
+                    <Select value={newProvider.provider_type} onValueChange={(value) => setNewProvider(prev => ({...prev, provider_type: value}))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="oauth2">OAuth 2.0</SelectItem>
+                        <SelectItem value="saml">SAML</SelectItem>
+                        <SelectItem value="azure">Azure AD</SelectItem>
+                        <SelectItem value="google">Google</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="client-id">Client ID</Label>
+                      <Input
+                        id="client-id"
+                        value={newProvider.client_id}
+                        onChange={(e) => setNewProvider(prev => ({...prev, client_id: e.target.value}))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="client-secret">Client Secret</Label>
+                      <Input
+                        id="client-secret"
+                        type="password"
+                        value={newProvider.client_secret}
+                        onChange={(e) => setNewProvider(prev => ({...prev, client_secret: e.target.value}))}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="auth-url">Authorization URL</Label>
+                    <Input
+                      id="auth-url"
+                      value={newProvider.authorization_url}
+                      onChange={(e) => setNewProvider(prev => ({...prev, authorization_url: e.target.value}))}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="token-url">Token URL</Label>
+                    <Input
+                      id="token-url"
+                      value={newProvider.token_url}
+                      onChange={(e) => setNewProvider(prev => ({...prev, token_url: e.target.value}))}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="scope">Scope</Label>
+                    <Input
+                      id="scope"
+                      value={newProvider.scope}
+                      onChange={(e) => setNewProvider(prev => ({...prev, scope: e.target.value}))}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="domains">Auto-approve Domains (comma separated)</Label>
+                    <Input
+                      id="domains"
+                      placeholder="company.com, partner.com"
+                      value={newProvider.auto_approve_domains}
+                      onChange={(e) => setNewProvider(prev => ({...prev, auto_approve_domains: e.target.value}))}
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={newProvider.enabled}
+                      onCheckedChange={(checked) => setNewProvider(prev => ({...prev, enabled: checked}))}
+                    />
+                    <Label>Enable provider</Label>
+                  </div>
+                </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setNewProviderOpen(false)}>
                     Cancel
                   </Button>
-                  <Button>Add Provider</Button>
+                  <Button onClick={handleCreateProvider}>
+                    Create Provider
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
 
-          <div className="space-y-4">
-            {authProviders.map(provider => (
-              <ProviderCard key={provider.id} provider={provider} />
-            ))}
+          <div>
+            {authProviders.length === 0 ? (
+              <Card>
+                <CardContent className="flex items-center justify-center h-32">
+                  <p className="text-muted-foreground">No SSO providers configured</p>
+                </CardContent>
+              </Card>
+            ) : (
+              authProviders.map(provider => (
+                <ProviderCard key={provider.id} provider={provider} />
+              ))
+            )}
           </div>
         </TabsContent>
 
@@ -536,7 +908,7 @@ const AuthConfig: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-semibold">SMTP Configuration</h2>
-              <p className="text-muted-foreground">Configure email sending settings</p>
+              <p className="text-muted-foreground">Configure email server settings for notifications</p>
             </div>
             <Dialog open={newSMTPOpen} onOpenChange={setNewSMTPOpen}>
               <DialogTrigger asChild>
@@ -549,24 +921,113 @@ const AuthConfig: React.FC = () => {
                 <DialogHeader>
                   <DialogTitle>Add SMTP Configuration</DialogTitle>
                   <DialogDescription>
-                    Configure a new SMTP server for sending emails
+                    Configure email server settings for sending notifications
                   </DialogDescription>
                 </DialogHeader>
-                {/* Add SMTP form would go here */}
+                <div className="grid gap-4 py-4">
+                  <div>
+                    <Label htmlFor="smtp-name">Configuration Name</Label>
+                    <Input
+                      id="smtp-name"
+                      placeholder="e.g. Primary SMTP"
+                      value={newSMTP.name}
+                      onChange={(e) => setNewSMTP(prev => ({...prev, name: e.target.value}))}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="smtp-host">SMTP Host</Label>
+                      <Input
+                        id="smtp-host"
+                        placeholder="smtp.gmail.com"
+                        value={newSMTP.host}
+                        onChange={(e) => setNewSMTP(prev => ({...prev, host: e.target.value}))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="smtp-port">Port</Label>
+                      <Input
+                        id="smtp-port"
+                        type="number"
+                        value={newSMTP.port}
+                        onChange={(e) => setNewSMTP(prev => ({...prev, port: parseInt(e.target.value) || 587}))}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="smtp-username">Username</Label>
+                      <Input
+                        id="smtp-username"
+                        value={newSMTP.username}
+                        onChange={(e) => setNewSMTP(prev => ({...prev, username: e.target.value}))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="smtp-password">Password</Label>
+                      <Input
+                        id="smtp-password"
+                        type="password"
+                        value={newSMTP.password}
+                        onChange={(e) => setNewSMTP(prev => ({...prev, password: e.target.value}))}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="from-email">From Email</Label>
+                    <Input
+                      id="from-email"
+                      type="email"
+                      placeholder="noreply@company.com"
+                      value={newSMTP.from_email}
+                      onChange={(e) => setNewSMTP(prev => ({...prev, from_email: e.target.value}))}
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={newSMTP.use_tls}
+                        onCheckedChange={(checked) => setNewSMTP(prev => ({...prev, use_tls: checked}))}
+                      />
+                      <Label>Use TLS</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={newSMTP.enabled}
+                        onCheckedChange={(checked) => setNewSMTP(prev => ({...prev, enabled: checked}))}
+                      />
+                      <Label>Enable configuration</Label>
+                    </div>
+                  </div>
+                </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setNewSMTPOpen(false)}>
                     Cancel
                   </Button>
-                  <Button>Add Configuration</Button>
+                  <Button onClick={handleCreateSMTP}>
+                    Create Configuration
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
 
-          <div className="space-y-4">
-            {smtpConfigs.map(config => (
-              <SMTPCard key={config.id} config={config} />
-            ))}
+          <div>
+            {smtpConfigs.length === 0 ? (
+              <Card>
+                <CardContent className="flex items-center justify-center h-32">
+                  <p className="text-muted-foreground">No SMTP configurations</p>
+                </CardContent>
+              </Card>
+            ) : (
+              smtpConfigs.map(config => (
+                <SMTPCard key={config.id} config={config} />
+              ))
+            )}
           </div>
         </TabsContent>
 
@@ -574,7 +1035,7 @@ const AuthConfig: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-semibold">Client Applications</h2>
-              <p className="text-muted-foreground">Applications that consume this auth service</p>
+              <p className="text-muted-foreground">Manage applications that can authenticate with this service</p>
             </div>
             <Dialog open={newClientOpen} onOpenChange={setNewClientOpen}>
               <DialogTrigger asChild>
@@ -587,73 +1048,135 @@ const AuthConfig: React.FC = () => {
                 <DialogHeader>
                   <DialogTitle>Add Client Application</DialogTitle>
                   <DialogDescription>
-                    Register a new application to use this auth service
+                    Register a new application that can authenticate with this service
                   </DialogDescription>
                 </DialogHeader>
-                {/* Add client form would go here */}
+                <div className="grid gap-4 py-4">
+                  <div>
+                    <Label htmlFor="client-name">Application Name</Label>
+                    <Input
+                      id="client-name"
+                      placeholder="My Web Application"
+                      value={newClient.name}
+                      onChange={(e) => setNewClient(prev => ({...prev, name: e.target.value}))}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="client-description">Description</Label>
+                    <Textarea
+                      id="client-description"
+                      placeholder="Brief description of the application"
+                      value={newClient.description}
+                      onChange={(e) => setNewClient(prev => ({...prev, description: e.target.value}))}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="redirect-uris">Redirect URIs (comma separated)</Label>
+                    <Input
+                      id="redirect-uris"
+                      placeholder="https://app.com/auth/callback, https://app.com/login"
+                      value={newClient.redirect_uris}
+                      onChange={(e) => setNewClient(prev => ({...prev, redirect_uris: e.target.value}))}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="origins">Allowed Origins (comma separated)</Label>
+                    <Input
+                      id="origins"
+                      placeholder="https://app.com, https://www.app.com"
+                      value={newClient.allowed_origins}
+                      onChange={(e) => setNewClient(prev => ({...prev, allowed_origins: e.target.value}))}
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={newClient.enabled}
+                      onCheckedChange={(checked) => setNewClient(prev => ({...prev, enabled: checked}))}
+                    />
+                    <Label>Enable application</Label>
+                  </div>
+                </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setNewClientOpen(false)}>
                     Cancel
                   </Button>
-                  <Button>Add Application</Button>
+                  <Button onClick={handleCreateClient}>
+                    Create Application
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
 
-          <div className="space-y-4">
-            {clientApps.map(client => (
-              <ClientCard key={client.id} client={client} />
-            ))}
+          <div>
+            {clientApps.length === 0 ? (
+              <Card>
+                <CardContent className="flex items-center justify-center h-32">
+                  <p className="text-muted-foreground">No client applications configured</p>
+                </CardContent>
+              </Card>
+            ) : (
+              clientApps.map(client => (
+                <ClientCard key={client.id} client={client} />
+              ))
+            )}
           </div>
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-6">
           <div>
-            <h2 className="text-2xl font-semibold">General Settings</h2>
-            <p className="text-muted-foreground">Configure authentication policies and security settings</p>
+            <h2 className="text-2xl font-semibold">Authentication Settings</h2>
+            <p className="text-muted-foreground">Configure general authentication and security settings</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Token Settings</CardTitle>
-                <CardDescription>Configure JWT token lifetimes</CardDescription>
+                <CardTitle className="flex items-center space-x-2">
+                  <Key className="h-5 w-5" />
+                  <span>Token Settings</span>
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <Label>Access Token Lifetime (minutes)</Label>
-                  <Input type="number" defaultValue="15" className="mt-1" />
-                </div>
-                <div>
-                  <Label>Refresh Token Lifetime (days)</Label>
-                  <Input type="number" defaultValue="30" className="mt-1" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Access Token Expiry (minutes)</Label>
+                    <Input type="number" value={authSettings.access_token_expire_minutes || 15} />
+                  </div>
+                  <div>
+                    <Label>Refresh Token Expiry (days)</Label>
+                    <Input type="number" value={authSettings.refresh_token_expire_days || 30} />
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Password Policy</CardTitle>
-                <CardDescription>Configure password requirements</CardDescription>
+                <CardTitle className="flex items-center space-x-2">
+                  <Shield className="h-5 w-5" />
+                  <span>Password Policy</span>
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <Label>Minimum Length</Label>
-                  <Input type="number" defaultValue="8" className="mt-1" />
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Switch defaultChecked />
-                    <Label>Require Uppercase</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Minimum Length</Label>
+                    <Input type="number" value={authSettings.password_min_length || 8} />
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch defaultChecked />
-                    <Label>Require Numbers</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch defaultChecked />
-                    <Label>Require Special Characters</Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Switch checked={authSettings.password_require_uppercase || false} />
+                      <Label>Require Uppercase</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch checked={authSettings.password_require_numbers || false} />
+                      <Label>Require Numbers</Label>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -662,20 +1185,21 @@ const AuthConfig: React.FC = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Rate Limiting</CardTitle>
-                <CardDescription>Configure rate limits for auth endpoints</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <Label>Login Attempts (per minute)</Label>
-                  <Input type="number" defaultValue="5" className="mt-1" />
-                </div>
-                <div>
-                  <Label>Signup Requests (per minute)</Label>
-                  <Input type="number" defaultValue="3" className="mt-1" />
-                </div>
-                <div>
-                  <Label>OTP Requests (per minute)</Label>
-                  <Input type="number" defaultValue="3" className="mt-1" />
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label>Login Rate Limit</Label>
+                    <Input type="number" value={authSettings.login_rate_limit || 5} />
+                  </div>
+                  <div>
+                    <Label>Signup Rate Limit</Label>
+                    <Input type="number" value={authSettings.signup_rate_limit || 3} />
+                  </div>
+                  <div>
+                    <Label>OTP Rate Limit</Label>
+                    <Input type="number" value={authSettings.otp_rate_limit || 3} />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -683,27 +1207,18 @@ const AuthConfig: React.FC = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Approval Settings</CardTitle>
-                <CardDescription>Configure user approval workflow</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-2">
-                  <Switch defaultChecked />
-                  <Label>Require Admin Approval</Label>
+                  <Switch checked={authSettings.require_admin_approval || false} />
+                  <Label>Require Admin Approval for New Users</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Switch />
-                  <Label>Auto-approve Verified Emails</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch />
-                  <Label>Enable MFA for Admins</Label>
+                  <Switch checked={authSettings.auto_approve_verified_emails || true} />
+                  <Label>Auto-approve Verified Email Addresses</Label>
                 </div>
               </CardContent>
             </Card>
-          </div>
-
-          <div className="flex justify-end">
-            <Button>Save Settings</Button>
           </div>
         </TabsContent>
       </Tabs>

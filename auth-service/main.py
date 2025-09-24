@@ -14,7 +14,7 @@ from typing import Optional
 
 from app.core.config import get_settings
 from app.core.database import init_db
-from app.api.v1.routes import auth, admin, users
+from app.api.v1.routes import auth, admin, users, admin_config
 from app.core.security import verify_token
 from app.models.user import User
 
@@ -55,6 +55,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/v1/auth", tags=["authentication"])
 app.include_router(admin.router, prefix="/v1/admin", tags=["admin"])
 app.include_router(users.router, prefix="/v1/users", tags=["users"])
+app.include_router(admin_config.router, prefix="/v1", tags=["admin-config"])
 
 @app.get("/")
 async def root():
