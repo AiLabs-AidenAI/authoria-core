@@ -101,6 +101,43 @@ const AuthConfig: React.FC = () => {
     description: ''
   });
 
+  // Provider presets for auto-population
+  const getProviderPresets = (type: string) => {
+    const presets: Record<string, any> = {
+      azure: {
+        name: 'azure',
+        display_name: 'Microsoft Azure AD',
+        authorization_url: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+        token_url: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+        userinfo_url: 'https://graph.microsoft.com/v1.0/me',
+        scope: 'openid profile email',
+        icon_url: 'https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg',
+        description: 'Sign in with Microsoft Azure AD'
+      },
+      google: {
+        name: 'google',
+        display_name: 'Google',
+        authorization_url: 'https://accounts.google.com/o/oauth2/v2/auth',
+        token_url: 'https://oauth2.googleapis.com/token',
+        userinfo_url: 'https://www.googleapis.com/oauth2/v2/userinfo',
+        scope: 'openid profile email',
+        icon_url: 'https://developers.google.com/identity/images/g-logo.png',
+        description: 'Sign in with Google'
+      },
+      github: {
+        name: 'github',
+        display_name: 'GitHub',
+        authorization_url: 'https://github.com/login/oauth/authorize',
+        token_url: 'https://github.com/login/oauth/access_token',
+        userinfo_url: 'https://api.github.com/user',
+        scope: 'user:email',
+        icon_url: 'https://github.com/favicon.ico',
+        description: 'Sign in with GitHub'
+      }
+    };
+    return presets[type] || {};
+  };
+
   const [newSMTP, setNewSMTP] = useState({
     name: '',
     host: '',
@@ -210,7 +247,24 @@ const AuthConfig: React.FC = () => {
   };
 
   const handleCreateProvider = async () => {
+    // Validation
+    const errors = [];
+    if (!newProvider.name.trim()) errors.push('Provider name is required');
+    if (!newProvider.display_name.trim()) errors.push('Display name is required');
+    if (!newProvider.client_id.trim()) errors.push('Client ID is required');
+    if (!newProvider.client_secret.trim()) errors.push('Client secret is required');
+    
+    if (errors.length > 0) {
+      toast({
+        title: "Validation Error",
+        description: errors.join(', '),
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
+      setLoading(true);
       const providerData = {
         ...newProvider,
         auto_approve_domains: newProvider.auto_approve_domains.split(',').map(d => d.trim()).filter(d => d)
@@ -219,6 +273,8 @@ const AuthConfig: React.FC = () => {
       const created = await authAPI.createAuthProvider(providerData);
       setAuthProviders(prev => [...prev, created]);
       setNewProviderOpen(false);
+      
+      // Reset form
       setNewProvider({
         name: '',
         display_name: '',
@@ -237,16 +293,18 @@ const AuthConfig: React.FC = () => {
       });
       
       toast({
-        title: "Provider created",
-        description: "New authentication provider has been created successfully."
+        title: "Provider created successfully! 🎉",
+        description: `${created.display_name} has been configured and is ready to use.`,
       });
     } catch (error) {
       console.error('Failed to create provider:', error);
       toast({
-        title: "Error",
-        description: "Failed to create provider",
+        title: "Failed to create provider",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -763,125 +821,305 @@ const AuthConfig: React.FC = () => {
             </div>
             <Dialog open={newProviderOpen} onOpenChange={setNewProviderOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button className="bg-primary hover:bg-primary/90">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Provider
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Add SSO Provider</DialogTitle>
+                  <DialogTitle className="text-xl font-semibold">Add SSO Provider</DialogTitle>
                   <DialogDescription>
-                    Configure a new single sign-on authentication provider
+                    Configure a new single sign-on authentication provider. Select a provider type to auto-populate common settings.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="provider-name">Provider Name</Label>
-                      <Input
-                        id="provider-name"
-                        placeholder="e.g. azure, google, github"
-                        value={newProvider.name}
-                        onChange={(e) => setNewProvider(prev => ({...prev, name: e.target.value}))}
-                      />
+                
+                <div className="space-y-6 py-4">
+                  {/* Provider Type Selection */}
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <h3 className="text-sm font-medium mb-3">Provider Type</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label htmlFor="provider-type">Select Provider</Label>
+                        <Select 
+                          value={newProvider.provider_type} 
+                          onValueChange={(value) => {
+                            const presets = getProviderPresets(value);
+                            setNewProvider(prev => ({
+                              ...prev, 
+                              provider_type: value,
+                              ...presets
+                            }));
+                          }}
+                        >
+                          <SelectTrigger className="bg-background border-2 shadow-sm z-50">
+                            <SelectValue placeholder="Choose a provider type" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-background border shadow-lg z-50">
+                            <SelectItem value="azure" className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-blue-600" />
+                              Microsoft Azure AD
+                            </SelectItem>
+                            <SelectItem value="google" className="flex items-center gap-2">
+                              <div className="h-4 w-4 bg-red-500 rounded-full"></div>
+                              Google OAuth
+                            </SelectItem>
+                            <SelectItem value="github" className="flex items-center gap-2">
+                              <div className="h-4 w-4 bg-gray-900 rounded-full"></div>
+                              GitHub OAuth
+                            </SelectItem>
+                            <SelectItem value="oauth2">Generic OAuth 2.0</SelectItem>
+                            <SelectItem value="saml">SAML 2.0</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          URLs and settings will be auto-populated based on your selection
+                        </p>
+                      </div>
+                      <div>
+                        <Label htmlFor="provider-name">Provider ID</Label>
+                        <Input
+                          id="provider-name"
+                          placeholder="e.g. azure, google, github"
+                          value={newProvider.name}
+                          onChange={(e) => setNewProvider(prev => ({...prev, name: e.target.value}))}
+                          className="border-2"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Unique identifier for this provider
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="display-name">Display Name</Label>
-                      <Input
-                        id="display-name"
-                        placeholder="e.g. Microsoft Azure AD"
-                        value={newProvider.display_name}
-                        onChange={(e) => setNewProvider(prev => ({...prev, display_name: e.target.value}))}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="provider-type">Provider Type</Label>
-                    <Select value={newProvider.provider_type} onValueChange={(value) => setNewProvider(prev => ({...prev, provider_type: value}))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="oauth2">OAuth 2.0</SelectItem>
-                        <SelectItem value="saml">SAML</SelectItem>
-                        <SelectItem value="azure">Azure AD</SelectItem>
-                        <SelectItem value="google">Google</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="client-id">Client ID</Label>
-                      <Input
-                        id="client-id"
-                        value={newProvider.client_id}
-                        onChange={(e) => setNewProvider(prev => ({...prev, client_id: e.target.value}))}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="client-secret">Client Secret</Label>
-                      <Input
-                        id="client-secret"
-                        type="password"
-                        value={newProvider.client_secret}
-                        onChange={(e) => setNewProvider(prev => ({...prev, client_secret: e.target.value}))}
-                      />
+                  {/* Basic Configuration */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium border-b pb-2">Basic Configuration</h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <Label htmlFor="display-name">Display Name *</Label>
+                        <Input
+                          id="display-name"
+                          placeholder="e.g. Microsoft Azure AD, Google Sign-In"
+                          value={newProvider.display_name}
+                          onChange={(e) => setNewProvider(prev => ({...prev, display_name: e.target.value}))}
+                          className="border-2"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Name shown to users on the login page
+                        </p>
+                      </div>
+                      <div>
+                        <Label htmlFor="description">Description</Label>
+                        <Input
+                          id="description"
+                          placeholder="Brief description of this provider"
+                          value={newProvider.description}
+                          onChange={(e) => setNewProvider(prev => ({...prev, description: e.target.value}))}
+                          className="border-2"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div>
-                    <Label htmlFor="auth-url">Authorization URL</Label>
-                    <Input
-                      id="auth-url"
-                      value={newProvider.authorization_url}
-                      onChange={(e) => setNewProvider(prev => ({...prev, authorization_url: e.target.value}))}
-                    />
+                  {/* OAuth Configuration */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium border-b pb-2">OAuth Configuration</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="client-id" className="flex items-center gap-2">
+                          Client ID *
+                          <span className="text-xs text-muted-foreground">(from provider)</span>
+                        </Label>
+                        <Input
+                          id="client-id"
+                          placeholder="Enter client ID from your OAuth app"
+                          value={newProvider.client_id}
+                          onChange={(e) => setNewProvider(prev => ({...prev, client_id: e.target.value}))}
+                          className="border-2 font-mono text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="client-secret" className="flex items-center gap-2">
+                          Client Secret *
+                          <span className="text-xs text-muted-foreground">(keep secure)</span>
+                        </Label>
+                        <Input
+                          id="client-secret"
+                          type="password"
+                          placeholder="Enter client secret"
+                          value={newProvider.client_secret}
+                          onChange={(e) => setNewProvider(prev => ({...prev, client_secret: e.target.value}))}
+                          className="border-2 font-mono text-sm"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    <Label htmlFor="token-url">Token URL</Label>
-                    <Input
-                      id="token-url"
-                      value={newProvider.token_url}
-                      onChange={(e) => setNewProvider(prev => ({...prev, token_url: e.target.value}))}
-                    />
+                  {/* Endpoint URLs */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium border-b pb-2">Endpoint URLs</h3>
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="auth-url">Authorization URL</Label>
+                        <Input
+                          id="auth-url"
+                          placeholder="OAuth authorization endpoint"
+                          value={newProvider.authorization_url}
+                          onChange={(e) => setNewProvider(prev => ({...prev, authorization_url: e.target.value}))}
+                          className="border-2 font-mono text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="token-url">Token URL</Label>
+                        <Input
+                          id="token-url"
+                          placeholder="OAuth token endpoint"
+                          value={newProvider.token_url}
+                          onChange={(e) => setNewProvider(prev => ({...prev, token_url: e.target.value}))}
+                          className="border-2 font-mono text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="userinfo-url">User Info URL</Label>
+                        <Input
+                          id="userinfo-url"
+                          placeholder="User profile endpoint"
+                          value={newProvider.userinfo_url}
+                          onChange={(e) => setNewProvider(prev => ({...prev, userinfo_url: e.target.value}))}
+                          className="border-2 font-mono text-sm"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    <Label htmlFor="scope">Scope</Label>
-                    <Input
-                      id="scope"
-                      value={newProvider.scope}
-                      onChange={(e) => setNewProvider(prev => ({...prev, scope: e.target.value}))}
-                    />
+                  {/* Advanced Settings */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium border-b pb-2">Advanced Settings</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="scope">OAuth Scopes</Label>
+                        <Input
+                          id="scope"
+                          placeholder="openid profile email"
+                          value={newProvider.scope}
+                          onChange={(e) => setNewProvider(prev => ({...prev, scope: e.target.value}))}
+                          className="border-2 font-mono text-sm"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Space-separated list of OAuth scopes to request
+                        </p>
+                      </div>
+                      <div>
+                        <Label htmlFor="domains">Auto-approve Domains</Label>
+                        <Input
+                          id="domains"
+                          placeholder="company.com, partner.com"
+                          value={newProvider.auto_approve_domains}
+                          onChange={(e) => setNewProvider(prev => ({...prev, auto_approve_domains: e.target.value}))}
+                          className="border-2"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Users from these domains will be automatically approved (comma-separated)
+                        </p>
+                      </div>
+                      <div>
+                        <Label htmlFor="icon-url">Icon URL (optional)</Label>
+                        <Input
+                          id="icon-url"
+                          placeholder="https://example.com/icon.png"
+                          value={newProvider.icon_url}
+                          onChange={(e) => setNewProvider(prev => ({...prev, icon_url: e.target.value}))}
+                          className="border-2"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    <Label htmlFor="domains">Auto-approve Domains (comma separated)</Label>
-                    <Input
-                      id="domains"
-                      placeholder="company.com, partner.com"
-                      value={newProvider.auto_approve_domains}
-                      onChange={(e) => setNewProvider(prev => ({...prev, auto_approve_domains: e.target.value}))}
-                    />
+                  {/* Security Options */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium border-b pb-2">Security Options</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                        <div>
+                          <Label className="font-medium">Require Email Verification</Label>
+                          <p className="text-xs text-muted-foreground">
+                            Users must verify their email before accessing the system
+                          </p>
+                        </div>
+                        <Switch
+                          checked={newProvider.require_email_verification}
+                          onCheckedChange={(checked) => setNewProvider(prev => ({...prev, require_email_verification: checked}))}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                        <div>
+                          <Label className="font-medium">Enable Provider</Label>
+                          <p className="text-xs text-muted-foreground">
+                            Make this provider available for user authentication
+                          </p>
+                        </div>
+                        <Switch
+                          checked={newProvider.enabled}
+                          onCheckedChange={(checked) => setNewProvider(prev => ({...prev, enabled: checked}))}
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={newProvider.enabled}
-                      onCheckedChange={(checked) => setNewProvider(prev => ({...prev, enabled: checked}))}
-                    />
-                    <Label>Enable provider</Label>
-                  </div>
+                  {/* Preview Section */}
+                  {newProvider.display_name && (
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <h3 className="text-sm font-medium mb-3">Preview</h3>
+                      <div className="flex items-center space-x-3 p-3 border rounded-lg bg-background">
+                        {newProvider.provider_type === 'azure' ? (
+                          <Building2 className="w-6 h-6 text-blue-600" />
+                        ) : newProvider.icon_url ? (
+                          <img src={newProvider.icon_url} alt="" className="w-6 h-6" />
+                        ) : (
+                          <div className="w-6 h-6 bg-gray-300 rounded"></div>
+                        )}
+                        <div>
+                          <p className="font-medium">{newProvider.display_name}</p>
+                          <p className="text-xs text-muted-foreground">{newProvider.description || 'Sign in with ' + newProvider.display_name}</p>
+                        </div>
+                        <Badge variant={newProvider.enabled ? "default" : "secondary"} className="ml-auto">
+                          {newProvider.enabled ? "Enabled" : "Disabled"}
+                        </Badge>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setNewProviderOpen(false)}>
+
+                <DialogFooter className="gap-2">
+                  <Button variant="outline" onClick={() => {
+                    setNewProviderOpen(false);
+                    // Reset form
+                    setNewProvider({
+                      name: '',
+                      display_name: '',
+                      provider_type: 'oauth2',
+                      client_id: '',
+                      client_secret: '',
+                      authorization_url: '',
+                      token_url: '',
+                      userinfo_url: '',
+                      scope: 'openid profile email',
+                      auto_approve_domains: '',
+                      require_email_verification: true,
+                      enabled: false,
+                      icon_url: '',
+                      description: ''
+                    });
+                  }}>
                     Cancel
                   </Button>
-                  <Button onClick={handleCreateProvider}>
+                  <Button 
+                    onClick={handleCreateProvider}
+                    disabled={!newProvider.name || !newProvider.display_name || !newProvider.client_id || !newProvider.client_secret}
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
                     Create Provider
                   </Button>
                 </DialogFooter>
