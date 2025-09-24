@@ -213,7 +213,39 @@ class AzureOAuthProvider(AuthProvider):
 
         return f"{auth_url}?{urlencode(params)}"
 
-    async def link_account(self, user_id: uuid.UUID, **kwargs) -> LinkAccountResult:
+    def get_authorization_url(self, redirect_uri: str = None, state: str = None) -> str:
+        """Get authorization URL for backward compatibility"""
+        import asyncio
+        
+        # For sync compatibility, we'll run the async method
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+        result = loop.run_until_complete(
+            self.start_auth(redirect_uri=redirect_uri or self.redirect_uri, state=state)
+        )
+        
+        return result.redirect_url if result.success else ""
+    
+    async def exchange_code_for_user_info(self, code: str, redirect_uri: str) -> dict:
+        """Exchange code for user info - backward compatibility"""
+        result = await self.complete_auth(code=code, redirect_uri=redirect_uri)
+        
+        if not result.success:
+            return None
+            
+        # Convert NormalizedUser back to dict format
+        user_data = result.user
+        return {
+            "id": user_data.external_id,
+            "email": user_data.email,
+            "name": user_data.display_name,
+            "verified_email": user_data.provider_metadata.get("verified", True),
+            "picture": user_data.avatar_url
+        }
         """Link Azure account to existing user"""
         code = kwargs.get("code")
         if not code:

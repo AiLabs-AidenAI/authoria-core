@@ -101,10 +101,48 @@ source venv/bin/activate  # On Windows: venv\\Scripts\\activate`}</CodeBlock>
 
               <div>
                 <h4 className="font-semibold mb-2">5. Start the service</h4>
-                <CodeBlock section="start" language="bash">python main.py</CodeBlock>
+                <CodeBlock section="start" language="bash">{`# Using the startup script (recommended)
+python start_service.py
+
+# Or directly with uvicorn
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload`}</CodeBlock>
                 <div className="flex items-center gap-2 mt-2">
                   <Badge variant="secondary">Default Port: 8000</Badge>
                   <Badge variant="outline">Health Check: GET /health</Badge>
+                </div>
+              </div>
+
+              <div className="mt-6 p-4 border rounded-lg bg-blue-50 dark:bg-blue-950/20">
+                <h4 className="font-semibold mb-2 flex items-center gap-2">
+                  <Key className="h-4 w-4" />
+                  Default Admin Credentials
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-4">
+                    <code className="bg-background px-2 py-1 rounded">Email: admin@example.com</code>
+                    <code className="bg-background px-2 py-1 rounded">Password: admin123</code>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    ⚠️ <strong>Important:</strong> Change these credentials immediately after first login!
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <h4 className="font-semibold mb-2">Service URLs</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">API Base</Badge>
+                    <code className="text-sm">http://localhost:8000</code>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">API Docs</Badge>
+                    <code className="text-sm">http://localhost:8000/docs</code>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">ReDoc</Badge>
+                    <code className="text-sm">http://localhost:8000/redoc</code>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -124,7 +162,7 @@ SECRET_KEY=your-secret-key-minimum-32-characters
 DEBUG=true
 
 # CORS Origins (add your app's origin)
-ALLOWED_ORIGINS=http://localhost:3000,https://yourdomain.com
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,https://yourdomain.com
 
 # Email Configuration (for OTP and notifications)
 SMTP_HOST=smtp.gmail.com
@@ -133,9 +171,14 @@ SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
 FROM_EMAIL=noreply@yourapp.com
 
-# OAuth Providers (optional)
+# Google OAuth (optional)
 GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret`}</CodeBlock>
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# Azure OAuth (optional)
+AZURE_CLIENT_ID=your-azure-client-id
+AZURE_CLIENT_SECRET=your-azure-client-secret
+AZURE_TENANT_ID=your-azure-tenant-id`}</CodeBlock>
             </CardContent>
           </Card>
         </TabsContent>

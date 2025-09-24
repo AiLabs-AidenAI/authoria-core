@@ -526,9 +526,12 @@ class AuthService:
         
         try:
             oauth_provider = self.oauth_providers[provider]
-            auth_url = oauth_provider.get_authorization_url(redirect_uri, state)
+            result = await oauth_provider.start_auth(redirect_uri=redirect_uri, state=state)
             
-            return AuthResult(success=True, redirect_url=auth_url)
+            if not result.success:
+                return AuthResult(False, error_message=result.error or "Failed to start OAuth flow")
+            
+            return AuthResult(success=True, redirect_url=result.redirect_url)
         except Exception as e:
             return AuthResult(False, error_message=str(e))
 
@@ -540,23 +543,25 @@ class AuthService:
         
         try:
             oauth_provider = self.oauth_providers[provider]
-            user_info = await oauth_provider.exchange_code_for_user_info(code, redirect_uri)
+            result = await oauth_provider.complete_auth(code=code, redirect_uri=redirect_uri)
             
-            if not user_info:
-                return AuthResult(False, error_message="Failed to get user information from provider")
+            if not result.success:
+                return AuthResult(False, error_message=result.error or "Failed to complete OAuth flow")
+            
+            user_data = result.user
             
             async with AsyncSessionLocal() as db:
                 # Check if user exists
-                result = await db.execute(
-                    select(User).where(User.email == user_info['email'])
+                db_result = await db.execute(
+                    select(User).where(User.email == user_data.email)
                 )
-                user = result.scalar_one_or_none()
+                user = db_result.scalar_one_or_none()
                 
                 if not user:
                     # Create pending signup for OAuth users
                     await self.create_signup_request(
-                        email=user_info['email'],
-                        display_name=user_info.get('name', user_info['email'].split('@')[0]),
+                        email=user_data.email,
+                        display_name=user_data.display_name or user_data.email.split('@')[0],
                         provider=provider,
                         ip_address=ip_address
                     )

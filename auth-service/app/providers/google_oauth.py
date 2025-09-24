@@ -57,7 +57,7 @@ class GoogleOAuthProvider(AuthProvider):
         if not redirect_uri:
             return ProviderStartResult(
                 success=False,
-                error_message="Redirect URI is required"
+                error="Redirect URI is required"
             )
         
         # Build authorization URL
@@ -87,7 +87,7 @@ class GoogleOAuthProvider(AuthProvider):
         if not code:
             return ProviderCompleteResult(
                 success=False,
-                error_message="Authorization code is required"
+                error="Authorization code is required"
             )
         
         try:
@@ -96,7 +96,7 @@ class GoogleOAuthProvider(AuthProvider):
             if not token_data:
                 return ProviderCompleteResult(
                     success=False,
-                    error_message="Failed to exchange authorization code"
+                    error="Failed to exchange authorization code"
                 )
             
             # Get user info from Google
@@ -104,7 +104,7 @@ class GoogleOAuthProvider(AuthProvider):
             if not user_info:
                 return ProviderCompleteResult(
                     success=False,
-                    error_message="Failed to get user information from Google"
+                    error="Failed to get user information from Google"
                 )
             
             # Normalize user data
@@ -128,14 +128,15 @@ class GoogleOAuthProvider(AuthProvider):
             
             return ProviderCompleteResult(
                 success=True,
-                user_data=normalized_user,
-                requires_approval=requires_approval
+                user=normalized_user,
+                requires_approval=requires_approval,
+                tokens=token_data
             )
         
         except Exception as e:
             return ProviderCompleteResult(
                 success=False,
-                error_message=f"Google OAuth error: {str(e)}"
+                error=f"Google OAuth error: {str(e)}"
             )
     
     async def link_account(self, user_id: uuid.UUID, **kwargs) -> LinkAccountResult:
@@ -231,6 +232,40 @@ class GoogleOAuthProvider(AuthProvider):
             pass
         
         return False
+    
+    def get_authorization_url(self, redirect_uri: str, state: str = None) -> str:
+        """Get authorization URL for backward compatibility"""
+        import asyncio
+        
+        # For sync compatibility, we'll run the async method
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+        result = loop.run_until_complete(
+            self.start_auth(redirect_uri=redirect_uri, state=state)
+        )
+        
+        return result.redirect_url if result.success else ""
+    
+    async def exchange_code_for_user_info(self, code: str, redirect_uri: str) -> dict:
+        """Exchange code for user info - backward compatibility"""
+        result = await self.complete_auth(code=code, redirect_uri=redirect_uri)
+        
+        if not result.success:
+            return None
+            
+        # Convert NormalizedUser back to dict format
+        user_data = result.user
+        return {
+            "id": user_data.external_id,
+            "email": user_data.email,
+            "name": user_data.display_name,
+            "verified_email": user_data.email_verified or False,
+            "picture": user_data.avatar_url
+        }
     
     def validate_config(self) -> list[str]:
         """Validate Google OAuth configuration"""
