@@ -261,7 +261,6 @@ class AuthAPIClient {
   }
 
   // Audit endpoints
-
   async getAuditLogs(filters?: AuditLogFilters): Promise<PaginatedResponse<AuditLog>> {
     const params = new URLSearchParams();
     
@@ -277,6 +276,24 @@ class AuthAPIClient {
     const endpoint = `/v1/admin/audit${queryString ? '?' + queryString : ''}`;
     
     return this.request<PaginatedResponse<AuditLog>>(endpoint);
+  }
+
+  async exportAuditLogs(filters: AuditLogFilters): Promise<string> {
+    const params = new URLSearchParams(
+      Object.entries(filters).filter(([_, value]) => value !== undefined && value !== '')
+        .map(([key, value]) => [key, String(value)])
+    ).toString();
+    
+    const response = await fetch(`${this.baseUrl}/v1/admin/audit/export?${params}`, {
+      headers: this.accessToken ? { Authorization: `Bearer ${this.accessToken}` } : {},
+      credentials: 'include'
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    return response.text();
   }
 
   // Provider management

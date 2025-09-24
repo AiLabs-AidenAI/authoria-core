@@ -8,9 +8,11 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
+import Documentation from "./pages/Documentation";
 import AuthConfig from "@/pages/admin/AuthConfig";
 import PendingRequests from "@/pages/admin/PendingRequests";
 import Users from "@/pages/admin/Users";
+import AuditLog from "@/pages/admin/AuditLog";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -26,9 +28,31 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-          <Route path="/admin/auth-config" element={<AuthConfig />} />
-          <Route path="/admin/pending-requests" element={<PendingRequests />} />
-          <Route path="/admin/users" element={<Users />} />
+            <Route path="/documentation" element={
+              <ProtectedRoute>
+                <Documentation />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/auth-config" element={
+              <ProtectedRoute>
+                <AuthConfig />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/pending-requests" element={
+              <ProtectedRoute>
+                <PendingRequests />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/users" element={
+              <ProtectedRoute>
+                <Users />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/audit-log" element={
+              <ProtectedRoute>
+                <AuditLog />
+              </ProtectedRoute>
+            } />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

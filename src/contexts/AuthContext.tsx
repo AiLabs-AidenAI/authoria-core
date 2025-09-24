@@ -25,10 +25,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const initializeAuth = async () => {
     try {
-      // Try to refresh token on app load
-      const success = await refresh();
-      if (!success) {
-        // Clear any stale auth state
+      // Check if there's a stored user or refresh token available
+      const storedUser = localStorage.getItem('auth_user');
+      const hasRefreshToken = document.cookie.includes('refresh_token');
+      
+      if (storedUser && hasRefreshToken) {
+        // Try to refresh token only if we have stored auth state
+        const success = await refresh();
+        if (!success) {
+          clearAuthState();
+        }
+      } else {
+        // No stored auth state, start fresh
         clearAuthState();
       }
     } catch (error) {
