@@ -11,6 +11,9 @@ from datetime import datetime, timedelta
 from typing import Optional
 import secrets
 import hashlib
+import uuid
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
 
 from app.core.database import get_db
 from app.models.user import User
@@ -91,16 +94,12 @@ async def get_current_admin_user(
 
 def hash_password(password: str) -> str:
     """Hash password using Argon2"""
-    from argon2 import PasswordHasher
     ph = PasswordHasher()
     return ph.hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify password using Argon2"""
-    from argon2 import PasswordHasher
-    from argon2.exceptions import VerifyMismatchError
-    
     ph = PasswordHasher()
     try:
         ph.verify(hashed_password, plain_password)

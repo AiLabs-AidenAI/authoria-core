@@ -13,7 +13,7 @@ class ProviderType(str, Enum):
     LOCAL_PASSWORD = "local_password"
     EMAIL_OTP = "email_otp"
     GOOGLE_OAUTH = "google"
-    AZURE_OIDC = "azure"
+    AZURE_OAUTH = "azure"
     GITHUB_OAUTH = "github"
     SAML = "saml"
 
@@ -60,9 +60,14 @@ class LinkAccountResult:
 class AuthProvider(ABC):
     """Abstract base class for authentication providers"""
     
-    def __init__(self, provider_id: str, config: Dict[str, Any]):
-        self.provider_id = provider_id
-        self.config = config
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        self.config = config or {}
+    
+    @property
+    @abstractmethod
+    def provider_id(self) -> str:
+        """Return the unique identifier for this provider"""
+        pass
     
     @property
     @abstractmethod

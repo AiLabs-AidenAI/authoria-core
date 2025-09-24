@@ -173,6 +173,19 @@ class BulkOperationResult(BaseModel):
     failed_operations: List[Dict[str, Any]]
 
 
+class CreateUserRequest(BaseModel):
+    email: EmailStr
+    display_name: str = Field(..., min_length=2, max_length=100)
+    password: Optional[str] = Field(None, min_length=8, max_length=128)
+    is_admin: bool = False
+
+
+class UpdateUserRequest(BaseModel):
+    display_name: Optional[str] = Field(None, min_length=2, max_length=100)
+    is_admin: Optional[bool] = None
+    is_approved: Optional[bool] = None
+
+
 # Integration schemas
 class RBACUserMapping(BaseModel):
     user_id: uuid.UUID

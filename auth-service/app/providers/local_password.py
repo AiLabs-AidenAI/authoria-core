@@ -23,6 +23,10 @@ class LocalPasswordProvider(AuthProvider):
     """Email and password authentication provider"""
     
     @property
+    def provider_id(self) -> str:
+        return "local_password"
+    
+    @property
     def provider_type(self) -> ProviderType:
         return ProviderType.LOCAL_PASSWORD
     

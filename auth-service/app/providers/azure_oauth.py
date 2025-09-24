@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional
 from urllib.parse import urlencode
 import logging
 
-from app.providers.base import AuthProvider, ProviderType, ProviderStartResult, ProviderCompleteResult, NormalizedUser
+from app.providers.base import AuthProvider, ProviderType, ProviderStartResult, ProviderCompleteResult, NormalizedUser, LinkAccountResult
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -15,12 +15,17 @@ settings = get_settings()
 
 
 class AzureOAuthProvider(AuthProvider):
-    def __init__(self, tenant_id: str = "common"):
-        self.tenant_id = tenant_id
-        self.client_id: Optional[str] = None
-        self.client_secret: Optional[str] = None
-        self.redirect_uri: Optional[str] = None
-        self._enabled = False
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        super().__init__(config)
+        self.tenant_id = self.config.get("tenant_id", "common")
+        self.client_id = self.config.get("client_id")
+        self.client_secret = self.config.get("client_secret") 
+        self.redirect_uri = self.config.get("redirect_uri")
+        self._enabled = bool(self.client_id and self.client_secret and self.redirect_uri)
+
+    @property
+    def provider_id(self) -> str:
+        return "azure"
 
     @property
     def provider_id(self) -> str:
@@ -203,3 +208,65 @@ class AzureOAuthProvider(AuthProvider):
         }
 
         return f"{auth_url}?{urlencode(params)}"
+
+    async def link_account(self, user_id: uuid.UUID, **kwargs) -> LinkAccountResult:
+        """Link Azure account to existing user"""
+        code = kwargs.get("code")
+        if not code:
+            return LinkAccountResult(
+                success=False,
+                error_message="Authorization code is required"
+            )
+
+        try:
+            # Exchange code for tokens
+            token_url = f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/token"
+            
+            token_data = {
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
+                "code": code,
+                "grant_type": "authorization_code",
+                "redirect_uri": self.redirect_uri,
+                "scope": "openid profile email"
+            }
+
+            async with httpx.AsyncClient() as client:
+                token_response = await client.post(token_url, data=token_data)
+                token_response.raise_for_status()
+                tokens = token_response.json()
+
+            access_token = tokens.get("access_token")
+            if not access_token:
+                return LinkAccountResult(
+                    success=False,
+                    error_message="Failed to obtain access token"
+                )
+
+            # Get user profile
+            profile_url = "https://graph.microsoft.com/v1.0/me"
+            headers = {"Authorization": f"Bearer {access_token}"}
+
+            async with httpx.AsyncClient() as client:
+                profile_response = await client.get(profile_url, headers=headers)
+                profile_response.raise_for_status()
+                profile_data = profile_response.json()
+
+            link_data = {
+                "external_id": profile_data.get("id"),
+                "email": profile_data.get("mail") or profile_data.get("userPrincipalName"),
+                "access_token": access_token,
+                "profile_data": profile_data
+            }
+
+            return LinkAccountResult(
+                success=True,
+                link_data=link_data
+            )
+
+        except Exception as e:
+            logger.error(f"Azure account linking error: {e}")
+            return LinkAccountResult(
+                success=False,
+                error_message="Failed to link Azure account"
+            )

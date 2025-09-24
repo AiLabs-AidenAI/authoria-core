@@ -43,8 +43,17 @@ class AuthResult:
 class AuthService:
     def __init__(self):
         self.oauth_providers = {
-            'google': GoogleOAuthProvider(),
-            'azure': AzureOAuthProvider()
+            'google': GoogleOAuthProvider({
+                'client_id': settings.GOOGLE_CLIENT_ID,
+                'client_secret': settings.GOOGLE_CLIENT_SECRET,
+                'redirect_uri': f"{settings.BASE_URL}/v1/auth/oauth/google/callback"
+            }),
+            'azure': AzureOAuthProvider({
+                'client_id': settings.AZURE_CLIENT_ID,
+                'client_secret': settings.AZURE_CLIENT_SECRET,
+                'tenant_id': settings.AZURE_TENANT_ID,
+                'redirect_uri': f"{settings.BASE_URL}/v1/auth/oauth/azure/callback"
+            })
         }
 
     async def create_signup_request(self, email: str, display_name: str = None,

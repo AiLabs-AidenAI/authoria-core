@@ -26,6 +26,10 @@ class GoogleOAuthProvider(AuthProvider):
     GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
     
     @property
+    def provider_id(self) -> str:
+        return "google"
+    
+    @property
     def provider_type(self) -> ProviderType:
         return ProviderType.GOOGLE_OAUTH
     
