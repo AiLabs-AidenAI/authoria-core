@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime, timedelta
 
 from ...core.security import create_tokens, verify_token
-from ...core.rate_limiter import rate_limit
+from ...core.simple_rate_limiter import rate_limit
 from ...services.auth_service import AuthService
 from ...services.otp_service import OTPService
 from ...services.email_service import EmailService
@@ -29,10 +29,12 @@ router = APIRouter()
 def get_auth_service() -> AuthService:
     return AuthService()
 
-def get_otp_service() -> SimpleOTPService:
+def get_otp_service() -> 'SimpleOTPService':
+    from ...services.simple_otp_service import SimpleOTPService
     return SimpleOTPService()
 
-def get_email_service() -> SimpleEmailService:
+def get_email_service() -> 'SimpleEmailService':
+    from ...services.simple_email_service import SimpleEmailService
     return SimpleEmailService()
 
 
@@ -128,8 +130,8 @@ async def login(
 async def request_otp(
     request: OTPRequest,
     req: Request,
-    otp_service: SimpleOTPService = Depends(get_otp_service),
-    email_service: SimpleEmailService = Depends(get_email_service)
+    otp_service = Depends(get_otp_service),
+    email_service = Depends(get_email_service)
 ):
     """Request OTP for email-based authentication"""
     # Rate limiting
@@ -158,7 +160,7 @@ async def verify_otp(
     request: OTPVerifyRequest,
     response: Response,
     req: Request,
-    otp_service: SimpleOTPService = Depends(get_otp_service),
+    otp_service = Depends(get_otp_service),
     auth_service: AuthService = Depends(get_auth_service)
 ):
     """Verify OTP and authenticate user"""

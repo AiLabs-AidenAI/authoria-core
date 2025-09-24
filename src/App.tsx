@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
+import SignupSuccess from "./pages/auth/SignupSuccess";
+import PendingApproval from "./pages/auth/PendingApproval";
 import Documentation from "./pages/Documentation";
 import AuthConfig from "@/pages/admin/AuthConfig";
 import PendingRequests from "@/pages/admin/PendingRequests";
@@ -27,7 +29,11 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/auth/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/auth/signup" element={<Signup />} />
+            <Route path="/auth/signup-success" element={<SignupSuccess />} />
+            <Route path="/auth/pending-approval" element={<PendingApproval />} />
             <Route path="/documentation" element={
               <ProtectedRoute>
                 <Documentation />
