@@ -41,27 +41,27 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/admin/auth-config" element={
-              <ProtectedRoute>
+              <ProtectedRoute requireAdmin>
                 <AuthConfig />
               </ProtectedRoute>
             } />
             <Route path="/admin/pending-requests" element={
-              <ProtectedRoute>
+              <ProtectedRoute requireAdmin>
                 <PendingRequests />
               </ProtectedRoute>
             } />
             <Route path="/admin/users" element={
-              <ProtectedRoute>
+              <ProtectedRoute requireAdmin>
                 <Users />
               </ProtectedRoute>
             } />
             <Route path="/admin/audit-log" element={
-              <ProtectedRoute>
+              <ProtectedRoute requireAdmin>
                 <AuditLog />
               </ProtectedRoute>
             } />
             <Route path="/admin/tenants" element={
-              <ProtectedRoute>
+              <ProtectedRoute requireAdmin>
                 <TenantsManagement />
               </ProtectedRoute>
             } />

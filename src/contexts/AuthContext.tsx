@@ -25,19 +25,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const initializeAuth = async () => {
     try {
-      // Check if there's a stored user or refresh token available
       const storedUser = localStorage.getItem('auth_user');
-      const hasRefreshToken = document.cookie.includes('refresh_token');
-      
-      if (storedUser && hasRefreshToken) {
-        // Try to refresh token only if we have stored auth state
+
+      // Always try to refresh; cookie (httpOnly) will be sent automatically if present
+      if (storedUser) {
         const success = await refresh();
-        if (!success) {
-          clearAuthState();
-        }
+        if (!success) clearAuthState();
       } else {
-        // No stored auth state, start fresh
-        clearAuthState();
+        // Attempt refresh even without stored user to restore session from cookie
+        await refresh().catch(() => clearAuthState());
       }
     } catch (error) {
       console.error('Failed to initialize auth:', error);

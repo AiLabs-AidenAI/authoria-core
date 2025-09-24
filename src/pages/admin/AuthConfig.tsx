@@ -167,9 +167,9 @@ const AuthConfig: React.FC = () => {
     contact_email: ''
   });
 
-  // Load data on component mount
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadData = async () => {

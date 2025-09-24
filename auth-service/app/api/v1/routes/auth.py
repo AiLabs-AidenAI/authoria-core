@@ -37,6 +37,10 @@ def get_email_service() -> 'SimpleEmailService':
     from ...services.simple_email_service import SimpleEmailService
     return SimpleEmailService()
 
+# Settings for cookie flags
+from ...core.config import get_settings
+_settings = get_settings()
+
 
 @router.post("/signup", response_model=MessageResponse)
 async def signup(
@@ -105,8 +109,8 @@ async def login(
             value=result.refresh_token,
             max_age=30 * 24 * 60 * 60,  # 30 days
             httponly=True,
-            secure=True,
-            samesite="strict"
+            secure=not _settings.DEBUG,  # allow non-HTTPS in development
+            samesite="lax" if _settings.DEBUG else "strict"
         )
         
         return TokenResponse(
@@ -204,8 +208,8 @@ async def verify_otp(
             value=result.refresh_token,
             max_age=30 * 24 * 60 * 60,
             httponly=True,
-            secure=True,
-            samesite="strict"
+            secure=not _settings.DEBUG,  # allow non-HTTPS in development
+            samesite="lax" if _settings.DEBUG else "strict"
         )
         
         return TokenResponse(
@@ -360,8 +364,8 @@ async def refresh_token(
             value=result.new_refresh_token,
             max_age=30 * 24 * 60 * 60,
             httponly=True,
-            secure=True,
-            samesite="strict"
+            secure=not _settings.DEBUG,  # allow non-HTTPS in development
+            samesite="lax" if _settings.DEBUG else "strict"
         )
         
         return TokenResponse(
