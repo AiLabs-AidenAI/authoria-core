@@ -15,18 +15,29 @@ A comprehensive FastAPI-based authentication service with multiple provider supp
 
 ## Quick Start
 
-1. **Setup the service:**
+1. **Install dependencies:**
    ```bash
    cd auth-service
-   python run_setup.py
+   pip install -r requirements.txt
    ```
 
-2. **Start the service:**
+2. **Setup environment (optional):**
    ```bash
-   python start.py
+   cp .env.example .env
+   # Edit .env with your database and other settings
    ```
 
-3. **Access the service:**
+3. **Start the service:**
+   ```bash
+   python main.py
+   ```
+   
+   The service will automatically:
+   - Create the PostgreSQL database if it doesn't exist
+   - Set up all required tables
+   - Create an admin user (admin@example.com / admin123)
+
+4. **Access the service:**
    - API: http://localhost:8000
    - Docs: http://localhost:8000/docs
    - Admin login: admin@example.com / admin123
@@ -49,11 +60,15 @@ auth-service/
 
 ## Configuration
 
-The service uses SQLite by default for development. For production, configure:
-- Database URL
-- OAuth provider credentials
-- SMTP settings (optional, console logging used in development)
-- Redis (optional, in-memory used in development)
+The service uses PostgreSQL by default. Configure via environment variables or `.env` file:
+
+- **DATABASE_URL**: PostgreSQL connection string (required)
+- **OAuth provider credentials**: Google, Azure (optional)
+- **SMTP settings**: Email configuration (optional, uses console logging if not provided)
+- **Redis**: Caching and sessions (optional, uses in-memory if not provided)
+
+### PostgreSQL Setup
+Make sure PostgreSQL is running and accessible. The service will create the database automatically.
 
 ## API Endpoints
 

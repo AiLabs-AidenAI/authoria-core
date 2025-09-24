@@ -27,11 +27,81 @@ security = HTTPBearer(auto_error=False)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    await setup_database()
     await init_db()
     logger.info("Database initialized")
     yield
     # Shutdown
     logger.info("Shutting down auth service")
+
+async def setup_database():
+    """Complete database setup including creation and initial data"""
+    from app.core.database import Base, AsyncSessionLocal
+    from app.models.user import User
+    from app.core.security import hash_password
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy import create_engine, text
+    
+    settings = get_settings()
+    
+    # 1. Create database if it doesn't exist (PostgreSQL)
+    try:
+        sync_url = settings.DATABASE_URL.replace("asyncpg", "psycopg2")
+        engine = create_engine(sync_url.replace("/auth_db", "/postgres"))
+        
+        with engine.connect() as conn:
+            conn.execute(text("COMMIT"))  # End any existing transaction
+            result = conn.execute(text("SELECT 1 FROM pg_database WHERE datname = 'auth_db'"))
+            if not result.fetchone():
+                conn.execute(text("CREATE DATABASE auth_db"))
+                logger.info("Database 'auth_db' created")
+            else:
+                logger.info("Database 'auth_db' already exists")
+        
+        engine.dispose()
+    except Exception as e:
+        logger.info(f"Database creation info: {e} (continuing anyway)")
+    
+    # 2. Create tables
+    try:
+        engine = create_async_engine(settings.DATABASE_URL)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        await engine.dispose()
+        logger.info("Database tables ready")
+    except Exception as e:
+        logger.error(f"Table creation error: {e}")
+        raise
+    
+    # 3. Create admin user if doesn't exist
+    try:
+        async with AsyncSessionLocal() as db:
+            from sqlalchemy import select
+            
+            result = await db.execute(
+                select(User).where(User.email == "admin@example.com")
+            )
+            
+            if not result.scalar_one_or_none():
+                admin_user = User(
+                    email="admin@example.com",
+                    display_name="System Administrator", 
+                    password_hash=hash_password("admin123"),
+                    is_admin=True,
+                    is_approved=True,
+                    is_active=True,
+                    email_verified=True
+                )
+                
+                db.add(admin_user)
+                await db.commit()
+                logger.info("Admin user created: admin@example.com / admin123")
+            else:
+                logger.info("Admin user already exists")
+                
+    except Exception as e:
+        logger.error(f"Admin user setup error: {e}")
+        raise
 
 app = FastAPI(
     title="Authentication Service",
