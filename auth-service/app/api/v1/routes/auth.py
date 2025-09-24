@@ -29,11 +29,11 @@ router = APIRouter()
 def get_auth_service() -> AuthService:
     return AuthService()
 
-def get_otp_service() -> OTPService:
-    return OTPService()
+def get_otp_service() -> SimpleOTPService:
+    return SimpleOTPService()
 
-def get_email_service() -> EmailService:
-    return EmailService()
+def get_email_service() -> SimpleEmailService:
+    return SimpleEmailService()
 
 
 @router.post("/signup", response_model=MessageResponse)
@@ -128,8 +128,8 @@ async def login(
 async def request_otp(
     request: OTPRequest,
     req: Request,
-    otp_service: OTPService = Depends(get_otp_service),
-    email_service: EmailService = Depends(get_email_service)
+    otp_service: SimpleOTPService = Depends(get_otp_service),
+    email_service: SimpleEmailService = Depends(get_email_service)
 ):
     """Request OTP for email-based authentication"""
     # Rate limiting
@@ -158,7 +158,7 @@ async def verify_otp(
     request: OTPVerifyRequest,
     response: Response,
     req: Request,
-    otp_service: OTPService = Depends(get_otp_service),
+    otp_service: SimpleOTPService = Depends(get_otp_service),
     auth_service: AuthService = Depends(get_auth_service)
 ):
     """Verify OTP and authenticate user"""

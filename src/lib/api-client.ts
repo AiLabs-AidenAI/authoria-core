@@ -30,6 +30,14 @@ class AuthAPIClient {
   constructor(baseUrl = 'http://localhost:8000') {
     this.baseUrl = baseUrl;
     console.log('AuthAPIClient initialized with baseUrl:', baseUrl);
+    
+    // Set default base URL based on environment
+    if (typeof window !== 'undefined') {
+      // Browser environment - check if we're in development
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        this.baseUrl = baseUrl || 'http://localhost:8000';
+      }
+    }
   }
 
   setAccessToken(token: string | null) {
