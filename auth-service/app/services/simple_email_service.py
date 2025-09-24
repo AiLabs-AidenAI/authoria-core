@@ -1,74 +1,43 @@
 """
-Simple email service that logs to console (for development without SMTP)
+Simple Email service implementation for OTP delivery
+Fallback for when full SMTP is not configured
 """
 
-from typing import Optional
 import logging
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 class SimpleEmailService:
+    """Simple email service that logs emails instead of sending them"""
+    
     def __init__(self):
-        pass
+        self.enabled = False
+        logger.info("SimpleEmailService initialized - emails will be logged only")
 
     async def send_otp_email(self, email: str, otp: str) -> bool:
-        """Send OTP via email (logs to console for development)"""
+        """Log OTP instead of sending email"""
         try:
-            message = f"""
-            ===========================================
-            OTP EMAIL FOR: {email}
-            ===========================================
+            logger.info(f"""
+            ===============================================
+            OTP EMAIL (would be sent to: {email})
+            ===============================================
             Your verification code is: {otp}
-            
             This code will expire in 10 minutes.
-            ===========================================
-            """
-            print(message)
-            logger.info(f"OTP sent to {email}: {otp}")
+            ===============================================
+            """)
+            print(f"\n🔐 OTP for {email}: {otp}\n")
             return True
-            
         except Exception as e:
-            logger.error(f"Failed to send OTP email: {e}")
+            logger.error(f"Failed to log OTP: {e}")
             return False
 
-    async def send_admin_notification(self, signup_email: str, display_name: str, 
-                                    provider: str) -> bool:
-        """Send notification to admin about new signup request"""
-        try:
-            message = f"""
-            ===========================================
-            ADMIN NOTIFICATION
-            ===========================================
-            New signup request:
-            Email: {signup_email}
-            Name: {display_name}
-            Provider: {provider}
-            ===========================================
-            """
-            print(message)
-            logger.info(f"Admin notification: New signup from {signup_email}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Failed to send admin notification: {e}")
-            return False
+    async def send_admin_notification(self, signup_email: str, display_name: str, provider: str) -> bool:
+        """Log admin notification"""
+        logger.info(f"Admin notification: New signup from {signup_email} ({display_name}) via {provider}")
+        return True
 
     async def send_approval_notification(self, email: str, display_name: str) -> bool:
-        """Send approval notification to user"""
-        try:
-            message = f"""
-            ===========================================
-            APPROVAL EMAIL FOR: {email}
-            ===========================================
-            Hello {display_name},
-            
-            Your account has been approved! You can now log in.
-            ===========================================
-            """
-            print(message)
-            logger.info(f"Approval notification sent to {email}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Failed to send approval notification: {e}")
-            return False
+        """Log approval notification"""
+        logger.info(f"Approval notification sent to {email} ({display_name})")
+        return True

@@ -246,7 +246,8 @@ class AzureOAuthProvider(AuthProvider):
             "verified_email": user_data.provider_metadata.get("verified", True),
             "picture": user_data.avatar_url
         }
-        """Link Azure account to existing user"""
+
+    async def link_account(self, **kwargs) -> LinkAccountResult:
         code = kwargs.get("code")
         if not code:
             return LinkAccountResult(

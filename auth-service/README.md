@@ -1,99 +1,119 @@
 # Authentication Service
 
-A comprehensive FastAPI-based authentication service with multiple provider support.
+A production-ready FastAPI authentication service with multi-provider support, admin approval workflow, and comprehensive security features.
 
-## Features
+## ⚡ Quick Start
 
-- 🔐 Local password authentication
-- 📧 Email OTP authentication  
-- 🔑 OAuth2 with Google and Azure
-- 👥 Admin approval workflow
-- 📊 Admin dashboard with user management
-- 🔒 JWT token-based authentication
-- 📝 Comprehensive audit logging
-- ⚡ Rate limiting and security features
+```bash
+# 1. Install dependencies
+pip install -r requirements.txt
 
-## Quick Start
-
-1. **Install dependencies:**
-   ```bash
-   cd auth-service
-   pip install -r requirements.txt
-   ```
-
-2. **Setup environment (optional):**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your database and other settings
-   ```
-
-3. **Start the service:**
-   ```bash
-   python main.py
-   ```
-   
-   The service will automatically:
-   - Create the PostgreSQL database if it doesn't exist
-   - Set up all required tables
-   - Create an admin user (admin@example.com / admin123)
-
-4. **Access the service:**
-   - API: http://localhost:8000
-   - Docs: http://localhost:8000/docs
-   - Admin login: admin@example.com / admin123
-
-## Project Structure
-
-```
-auth-service/
-├── app/
-│   ├── api/v1/routes/          # API endpoints
-│   ├── core/                   # Core utilities
-│   ├── models/                 # Database models
-│   ├── providers/              # Auth providers
-│   └── services/               # Business logic
-├── main.py                     # FastAPI app
-├── setup_complete.py           # Database setup
-├── run_setup.py               # Setup runner
-└── start.py                   # Quick start
+# 2. Start the service  
+python start_service.py
 ```
 
-## Configuration
+**Default Admin Login:**
+- Email: `admin@example.com`
+- Password: `admin123`
 
-The service uses PostgreSQL by default. Configure via environment variables or `.env` file:
+## 🔧 Configuration
 
-- **DATABASE_URL**: PostgreSQL connection string (required)
-- **OAuth provider credentials**: Google, Azure (optional)
-- **SMTP settings**: Email configuration (optional, uses console logging if not provided)
-- **Redis**: Caching and sessions (optional, uses in-memory if not provided)
+### Environment Variables (.env)
+```env
+# Database
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/auth_db
 
-### PostgreSQL Setup
-Make sure PostgreSQL is running and accessible. The service will create the database automatically.
+# Email (Optional - will fallback to console logging)
+SMTP_HOST=smtp.gmail.com
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+FROM_EMAIL=noreply@yourapp.com
 
-## API Endpoints
+# OAuth Providers (Optional)
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-secret
+AZURE_CLIENT_ID=your-azure-client-id
+AZURE_CLIENT_SECRET=your-azure-secret
+AZURE_TENANT_ID=your-tenant-id
 
-### Authentication
-- `POST /v1/auth/signup` - Create signup request
-- `POST /v1/auth/login` - Login with email/password
-- `POST /v1/auth/otp/request` - Request OTP
-- `POST /v1/auth/otp/verify` - Verify OTP
-- `POST /v1/auth/refresh` - Refresh token
-- `POST /v1/auth/logout` - Logout
+# Security
+SECRET_KEY=your-super-secret-jwt-key-change-in-production
+```
 
-### OAuth
-- `GET /v1/auth/oauth/{provider}/start` - Start OAuth flow
-- `GET /v1/auth/oauth/{provider}/callback` - OAuth callback
+## 🌟 Features
 
-### Admin
-- `GET /v1/admin/pending-signups` - List pending signups
-- `POST /v1/admin/pending-signups/{id}/approve` - Approve signup
-- `GET /v1/admin/users` - List users
-- `GET /v1/admin/config/*` - Configuration management
+- **Multi-Provider Auth**: Google OAuth, Azure/Microsoft SSO, Email OTP
+- **Admin Approval**: Configurable approval workflow for new users  
+- **Security**: Rate limiting, JWT tokens, password policies
+- **Production Ready**: Docker support, comprehensive logging
+- **API Documentation**: Interactive docs at `/docs`
 
-## Development
+## 📚 Integration Examples
 
-The service includes development-friendly features:
-- Console-based email notifications (no SMTP required)
-- In-memory OTP storage (no Redis required)
-- SQLite database (no external DB required)
-- Auto-reload on code changes
+### Frontend Integration (React/JavaScript)
+```javascript
+// Login with email/password
+const loginResponse = await fetch('http://localhost:8000/v1/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email: 'user@example.com', password: 'password123' })
+});
+
+// Request OTP
+await fetch('http://localhost:8000/v1/auth/otp/request', {
+  method: 'POST', 
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email: 'user@example.com' })
+});
+
+// Start OAuth flow
+window.location.href = 'http://localhost:8000/v1/auth/oauth/google/start';
+```
+
+### Backend Integration (Node.js/Express)
+```javascript
+// Verify JWT token
+const response = await fetch('http://localhost:8000/v1/auth/introspect', {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+const result = await response.json();
+if (result.active) {
+  // Token is valid, proceed with request
+}
+```
+
+### Backend Integration (Python/FastAPI)
+```python
+import httpx
+
+async def verify_token(token: str):
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            "http://localhost:8000/v1/auth/introspect",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        return response.json()
+```
+
+## 🔧 Administration
+
+Access admin panel after authentication to:
+- Approve/reject user signups
+- Configure OAuth providers
+- Manage user accounts and permissions
+- View audit logs
+
+## 🐳 Docker Deployment
+
+```bash
+# Start with Docker Compose
+docker-compose up -d
+
+# Or build and run manually
+docker build -t auth-service .
+docker run -p 8000:8000 auth-service
+```
+
+## 📖 API Documentation
+
+Visit `http://localhost:8000/docs` for complete interactive API documentation with examples and testing interface.

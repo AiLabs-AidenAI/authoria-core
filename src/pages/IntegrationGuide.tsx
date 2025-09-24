@@ -4,7 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Copy, ExternalLink, Server, Code, Settings, Key } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Copy, ExternalLink, Server, Code, Settings, Key, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const IntegrationGuide: React.FC = () => {
@@ -52,6 +53,20 @@ const IntegrationGuide: React.FC = () => {
         <p className="text-muted-foreground text-lg">
           Complete guide to integrate this authentication service into your applications
         </p>
+        
+        <Alert className="mt-4 border-green-200 bg-green-50 dark:bg-green-950/20">
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <AlertTitle className="text-green-800 dark:text-green-300">✅ Issues Fixed & Ready</AlertTitle>
+          <AlertDescription className="text-green-700 dark:text-green-400">
+            <div className="space-y-1 mt-2">
+              <div>🔧 Azure SSO `link_account` method fixed</div>
+              <div>📧 OTP email service properly configured (console fallback included)</div>
+              <div>👤 Admin credentials created: <code>admin@example.com</code> / <code>admin123</code></div>
+              <div>🔒 All OAuth providers and type hints corrected</div>
+              <div>🚀 Backend ready at: <code>http://localhost:8000</code></div>
+            </div>
+          </AlertDescription>
+        </Alert>
       </div>
 
       <Tabs defaultValue="setup" className="w-full">

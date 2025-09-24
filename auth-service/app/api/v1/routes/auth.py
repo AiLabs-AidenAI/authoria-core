@@ -29,13 +29,11 @@ router = APIRouter()
 def get_auth_service() -> AuthService:
     return AuthService()
 
-def get_otp_service() -> 'SimpleOTPService':
-    from ...services.simple_otp_service import SimpleOTPService
-    return SimpleOTPService()
+def get_otp_service() -> 'OTPService':
+    return OTPService()
 
-def get_email_service() -> 'SimpleEmailService':
-    from ...services.simple_email_service import SimpleEmailService
-    return SimpleEmailService()
+def get_email_service() -> 'EmailService':
+    return EmailService()
 
 # Settings for cookie flags
 from ...core.config import get_settings
