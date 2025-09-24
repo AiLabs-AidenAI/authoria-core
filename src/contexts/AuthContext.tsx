@@ -78,6 +78,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         createdAt: new Date().toISOString()
       };
 
+      console.log('Login successful, user data:', userData);
+      console.log('Access token set:', response.accessToken);
+
       setAuthState(userData, response.accessToken);
 
       toast({

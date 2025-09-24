@@ -27,7 +27,7 @@ class AuthAPIClient {
   private baseUrl: string;
   private accessToken: string | null = null;
 
-  constructor(baseUrl = 'http://localhost:8000') {
+  constructor(baseUrl = 'http://localhost:8080') {
     this.baseUrl = baseUrl;
     console.log('AuthAPIClient initialized with baseUrl:', baseUrl);
     
@@ -35,7 +35,7 @@ class AuthAPIClient {
     if (typeof window !== 'undefined') {
       // Browser environment - check if we're in development
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        this.baseUrl = baseUrl || 'http://localhost:8000';
+        this.baseUrl = baseUrl || 'http://localhost:8080';
       }
     }
   }
@@ -67,6 +67,9 @@ class AuthAPIClient {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(errorData.detail || 'Not authenticated');
+      }
       throw new Error(errorData.detail || `HTTP ${response.status}`);
     }
 
