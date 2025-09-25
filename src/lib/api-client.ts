@@ -95,10 +95,18 @@ class AuthAPIClient {
 
   async login(email: string, password: string): Promise<TokenResponse> {
     const data: LoginRequest = { email, password };
-    return this.request<TokenResponse>('/v1/auth/login', {
+    const raw = await this.request<any>('/v1/auth/login', {
       method: 'POST',
       body: JSON.stringify(data)
     });
+    return {
+      accessToken: raw.accessToken ?? raw.access_token,
+      tokenType: raw.tokenType ?? raw.token_type,
+      expiresIn: raw.expiresIn ?? raw.expires_in,
+      userId: raw.userId ?? raw.user_id,
+      email: raw.email,
+      refreshToken: raw.refreshToken ?? raw.refresh_token,
+    };
   }
 
   async requestOTP(email: string): Promise<MessageResponse> {
@@ -111,16 +119,32 @@ class AuthAPIClient {
 
   async verifyOTP(email: string, otp: string): Promise<TokenResponse> {
     const data: OTPVerifyRequest = { email, otp };
-    return this.request<TokenResponse>('/v1/auth/otp/verify', {
+    const raw = await this.request<any>('/v1/auth/otp/verify', {
       method: 'POST',
       body: JSON.stringify(data)
     });
+    return {
+      accessToken: raw.accessToken ?? raw.access_token,
+      tokenType: raw.tokenType ?? raw.token_type,
+      expiresIn: raw.expiresIn ?? raw.expires_in,
+      userId: raw.userId ?? raw.user_id,
+      email: raw.email,
+      refreshToken: raw.refreshToken ?? raw.refresh_token,
+    };
   }
 
   async refreshToken(): Promise<TokenResponse> {
-    return this.request<TokenResponse>('/v1/auth/refresh', {
+    const raw = await this.request<any>('/v1/auth/refresh', {
       method: 'POST'
     });
+    return {
+      accessToken: raw.accessToken ?? raw.access_token,
+      tokenType: raw.tokenType ?? raw.token_type,
+      expiresIn: raw.expiresIn ?? raw.expires_in,
+      userId: raw.userId ?? raw.user_id,
+      email: raw.email,
+      refreshToken: raw.refreshToken ?? raw.refresh_token,
+    };
   }
 
   async logout(): Promise<MessageResponse> {
