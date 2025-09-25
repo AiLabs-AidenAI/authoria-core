@@ -3,12 +3,19 @@
  * Main landing page for the authentication service
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, Settings, Users, ArrowRight, Building2 } from 'lucide-react';
 
 const Index = () => {
+  const [serviceUp, setServiceUp] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch('http://localhost:8000/health')
+      .then((res) => setServiceUp(res.ok))
+      .catch(() => setServiceUp(false));
+  }, []);
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -100,15 +107,25 @@ const Index = () => {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Auth Service</span>
                     <div className="flex items-center space-x-1">
-                      <div className="h-2 w-2 rounded-full bg-red-500"></div>
-                      <span className="text-sm font-medium text-red-600">Not Running</span>
+                      <div
+                        className={`h-2 w-2 rounded-full ${
+                          serviceUp === null ? 'bg-gray-400' : serviceUp ? 'bg-green-500' : 'bg-red-500'
+                        }`}
+                      ></div>
+                      <span
+                        className={`text-sm font-medium ${
+                          serviceUp === null ? 'text-muted-foreground' : serviceUp ? 'text-green-600' : 'text-red-600'
+                        }`}
+                      >
+                        {serviceUp === null ? 'Checking...' : serviceUp ? 'Running' : 'Not Running'}
+                      </span>
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Database</span>
                     <div className="flex items-center space-x-1">
-                      <div className="h-2 w-2 rounded-full bg-red-500"></div>
-                      <span className="text-sm font-medium text-red-600">Disconnected</span>
+                      <div className="h-2 w-2 rounded-full bg-gray-400"></div>
+                      <span className="text-sm font-medium text-muted-foreground">Unknown</span>
                     </div>
                   </div>
                   <div className="text-xs text-muted-foreground mt-2">

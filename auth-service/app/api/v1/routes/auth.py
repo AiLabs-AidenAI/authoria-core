@@ -26,11 +26,14 @@ from ...models.schemas import (
 router = APIRouter()
 
 # Dependency injection
+# Use a module-level singleton for OTP service so codes persist between requests
+_otp_service_instance = SimpleOTPService()
+
 def get_auth_service() -> AuthService:
     return AuthService()
 
 def get_otp_service() -> 'SimpleOTPService':
-    return SimpleOTPService()
+    return _otp_service_instance
 
 def get_email_service() -> 'EmailService':
     return EmailService()
