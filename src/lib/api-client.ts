@@ -134,8 +134,16 @@ class AuthAPIClient {
   }
 
   async refreshToken(): Promise<TokenResponse> {
+    // Try to include refresh_token in body if available (for local dev without cookies)
+    let body: any = undefined;
+    try {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null;
+      if (stored) body = JSON.stringify({ refresh_token: stored });
+    } catch {}
+
     const raw = await this.request<any>('/v1/auth/refresh', {
-      method: 'POST'
+      method: 'POST',
+      body,
     });
     return {
       accessToken: raw.accessToken ?? raw.access_token,

@@ -23,18 +23,88 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth();
   }, []);
 
+  // Helpers: decode JWT and build user from claims or introspection
+  const decodeJwtPayload = (token: string): any | null => {
+    try {
+      const payload = token.split('.')[1];
+      if (!payload) return null;
+      const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const json = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      return JSON.parse(json);
+    } catch {
+      return null;
+    }
+  };
+
+  const buildUserFromClaims = (claims: any, fallback: Partial<User> = {}): User => {
+    const isAdmin = !!(
+      claims?.is_admin ||
+      claims?.admin ||
+      claims?.role === 'admin' ||
+      (Array.isArray(claims?.roles) && claims.roles.includes('admin'))
+    );
+    return {
+      id: String(claims?.sub || fallback.id || ''),
+      email: String(claims?.email || fallback.email || ''),
+      displayName: (fallback.displayName as string) || claims?.name || '',
+      role: isAdmin ? 'admin' : 'user',
+      isActive: true,
+      isApproved: true,
+      isAdmin,
+      tenantId: (claims?.tenant_id as string) || fallback.tenantId,
+      createdAt: new Date().toISOString(),
+    };
+  };
+
+  const fetchUserFromToken = async (token: string, fallbackEmail?: string): Promise<User> => {
+    try {
+      const info = await authAPI.introspectToken(token);
+      const isAdmin = !!(
+        info?.is_admin ||
+        info?.admin ||
+        info?.role === 'admin' ||
+        (Array.isArray(info?.roles) && info.roles.includes('admin'))
+      );
+      return {
+        id: String(info?.sub || info?.user_id || ''),
+        email: String(info?.email || fallbackEmail || ''),
+        displayName: info?.name || '',
+        role: isAdmin ? 'admin' : 'user',
+        isActive: true,
+        isApproved: true,
+        isAdmin,
+        tenantId: info?.tenant_id,
+        createdAt: new Date().toISOString(),
+      };
+    } catch {
+      const claims = decodeJwtPayload(token);
+      return buildUserFromClaims(claims, { email: fallbackEmail });
+    }
+  };
+
   const initializeAuth = async () => {
     try {
+      const storedToken = localStorage.getItem('access_token');
       const storedUser = localStorage.getItem('auth_user');
 
-      // Always try to refresh; cookie (httpOnly) will be sent automatically if present
-      if (storedUser) {
-        const success = await refresh();
-        if (!success) clearAuthState();
-      } else {
-        // Attempt refresh even without stored user to restore session from cookie
-        await refresh().catch(() => clearAuthState());
+      if (storedToken) {
+        authAPI.setAccessToken(storedToken);
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+          setIsAuthenticated(true);
+        } else {
+          const inferredUser = await fetchUserFromToken(storedToken);
+          setAuthState(inferredUser, storedToken);
+        }
       }
+
+      // Attempt refresh (uses cookie if available)
+      await refresh().catch(() => {});
     } catch (error) {
       console.error('Failed to initialize auth:', error);
       clearAuthState();
@@ -48,12 +118,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsAuthenticated(false);
     authAPI.setAccessToken(null);
     localStorage.removeItem('auth_user');
+    localStorage.removeItem('access_token');
   };
 
   const setAuthState = (userData: User, accessToken: string) => {
     setUser(userData);
     setIsAuthenticated(true);
     authAPI.setAccessToken(accessToken);
+    try { localStorage.setItem('access_token', accessToken); } catch {}
     localStorage.setItem('auth_user', JSON.stringify(userData));
   };
 
@@ -61,27 +133,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       const response = await authAPI.login(email, password);
-      
-      // Create user object from token response - assume admin for admin@example.com
-      const userData: User = {
-        id: response.userId,
-        email: response.email,
-        displayName: response.email === 'admin@example.com' ? 'System Administrator' : '',
-        role: response.email === 'admin@example.com' ? 'admin' : 'user',
-        isActive: true,
-        isApproved: true,
-        isAdmin: response.email === 'admin@example.com',
-        createdAt: new Date().toISOString()
-      };
 
-      console.log('Login successful, user data:', userData);
-      console.log('Access token set:', response.accessToken);
+      // Persist token immediately so subsequent requests include Authorization
+      authAPI.setAccessToken(response.accessToken);
+      try { localStorage.setItem('access_token', response.accessToken); } catch {}
+
+      // Build user from token (introspect or decode)
+      const userData = await fetchUserFromToken(response.accessToken, response.email);
 
       setAuthState(userData, response.accessToken);
 
       toast({
         title: "Login successful",
-        description: "Welcome back!"
+        description: `Welcome back${userData.isAdmin ? ', Admin' : ''}!`
       });
 
       return {
@@ -92,83 +156,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
-      
-      toast({
-        title: "Login failed",
-        description: errorMessage,
-        variant: "destructive"
-      });
-
-      return {
-        success: false,
-        errorMessage
-      };
+      toast({ title: "Login failed", description: errorMessage, variant: "destructive" });
+      return { success: false, errorMessage };
     } finally {
       setIsLoading(false);
     }
   };
-
   const loginWithOTP = async (email: string, otp: string): Promise<AuthResult> => {
     try {
       setIsLoading(true);
       const response = await authAPI.verifyOTP(email, otp);
-      
-      const userData: User = {
-        id: response.userId,
-        email: response.email,
-        displayName: '',
-        role: 'user',
-        isActive: true,
-        isApproved: true,
-        isAdmin: false,
-        createdAt: new Date().toISOString()
-      };
+
+      // Persist token and build user from token
+      authAPI.setAccessToken(response.accessToken);
+      try { localStorage.setItem('access_token', response.accessToken); } catch {}
+      const userData = await fetchUserFromToken(response.accessToken, response.email);
 
       setAuthState(userData, response.accessToken);
 
-      toast({
-        title: "OTP verification successful",
-        description: "Welcome!"
-      });
+      toast({ title: "OTP verification successful", description: "Welcome!" });
 
       return {
         success: true,
         accessToken: response.accessToken,
         userId: response.userId,
-        email: response.email
+        email: response.email,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'OTP verification failed';
-      
-      // Handle pending approval case
+
       if (errorMessage.includes('pending approval')) {
         toast({
           title: "Account pending approval",
           description: "Your account is awaiting admin approval. You'll be notified when it's ready.",
         });
-
-        return {
-          success: false,
-          requiresApproval: true,
-          errorMessage
-        };
+        return { success: false, requiresApproval: true, errorMessage };
       }
 
-      toast({
-        title: "OTP verification failed",
-        description: errorMessage,
-        variant: "destructive"
-      });
-
-      return {
-        success: false,
-        errorMessage
-      };
+      toast({ title: "OTP verification failed", description: errorMessage, variant: "destructive" });
+      return { success: false, errorMessage };
     } finally {
       setIsLoading(false);
     }
   };
-
   const signup = async (data: SignupRequest): Promise<MessageResponse> => {
     try {
       setIsLoading(true);
@@ -213,17 +243,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const refresh = async (): Promise<boolean> => {
     try {
       const response = await authAPI.refreshToken();
-      
-      const userData: User = {
-        id: response.userId,
-        email: response.email,
-        displayName: '',
-        role: 'user',
-        isActive: true,
-        isApproved: true,
-        isAdmin: false,
-        createdAt: new Date().toISOString()
-      };
+
+      // Persist new access token and rebuild user from token
+      authAPI.setAccessToken(response.accessToken);
+      try { localStorage.setItem('access_token', response.accessToken); } catch {}
+      const userData = await fetchUserFromToken(response.accessToken, response.email);
 
       setAuthState(userData, response.accessToken);
       return true;
@@ -233,7 +257,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return false;
     }
   };
-
   const linkProvider = async (provider: string, code?: string): Promise<boolean> => {
     try {
       if (!user) return false;
