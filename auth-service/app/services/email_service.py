@@ -84,7 +84,6 @@ class EmailService:
                 port=self.smtp_port,
                 username=self.smtp_user,
                 password=self.smtp_password,
-                use_tls=True,
                 start_tls=True
             )
             
@@ -140,7 +139,7 @@ class EmailService:
                 port=self.smtp_port,
                 username=self.smtp_user,
                 password=self.smtp_password,
-                use_tls=True
+                start_tls=True
             )
             
             return True
