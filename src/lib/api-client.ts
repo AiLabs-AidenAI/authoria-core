@@ -303,6 +303,54 @@ class AuthAPIClient {
     });
   }
 
+  // Role Management APIs
+  async getRoles(): Promise<{ items: any[] }> {
+    return this.request<{ items: any[] }>('/v1/admin/roles');
+  }
+
+  async createRole(roleData: {
+    name: string;
+    display_name: string;
+    description?: string;
+    is_admin_role: boolean;
+    permissions: string[];
+  }): Promise<MessageResponse> {
+    return this.request<MessageResponse>('/v1/admin/roles', {
+      method: 'POST',
+      body: JSON.stringify(roleData)
+    });
+  }
+
+  async updateRole(roleId: string, roleData: any): Promise<MessageResponse> {
+    return this.request<MessageResponse>(`/v1/admin/roles/${roleId}`, {
+      method: 'PUT',
+      body: JSON.stringify(roleData)
+    });
+  }
+
+  async deleteRole(roleId: string): Promise<MessageResponse> {
+    return this.request<MessageResponse>(`/v1/admin/roles/${roleId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async getUserRoles(userId: string): Promise<{ items: any[] }> {
+    return this.request<{ items: any[] }>(`/v1/admin/users/${userId}/roles`);
+  }
+
+  async assignUserRoles(userId: string, roleIds: string[]): Promise<MessageResponse> {
+    return this.request<MessageResponse>(`/v1/admin/users/${userId}/roles`, {
+      method: 'POST',
+      body: JSON.stringify({ role_ids: roleIds })
+    });
+  }
+
+  async removeUserRole(userId: string, roleId: string): Promise<MessageResponse> {
+    return this.request<MessageResponse>(`/v1/admin/users/${userId}/roles/${roleId}`, {
+      method: 'DELETE'
+    });
+  }
+
   // Audit endpoints
   async getAuditLogs(filters?: AuditLogFilters): Promise<PaginatedResponse<AuditLog>> {
     const params = new URLSearchParams();

@@ -158,9 +158,21 @@ class AuthService:
             
             # Log audit event
             await self._log_audit(
-                db, "user_approved", "user", user.id,
+                db, admin_user_id, "user_approved", "user", user.id,
                 {"approved_by": str(admin_user_id), "email": user.email}
             )
+            
+            # Send approval notification email
+            try:
+                from ..services.email_service import EmailService
+                email_service = EmailService()
+                await email_service.send_approval_notification(
+                    email=user.email,
+                    display_name=user.display_name
+                )
+            except Exception as e:
+                # Log error but don't fail the approval
+                print(f"Failed to send approval email to {user.email}: {e}")
             
             return user
 

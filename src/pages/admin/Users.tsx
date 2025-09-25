@@ -45,6 +45,7 @@ import { UserWithLoginModes, UserFilters } from '@/types/auth';
 import { toast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/Layout/AppLayout';
 import { CreateUserModal } from '@/components/admin/CreateUserModal';
+import { RoleManagementModal } from '@/components/admin/RoleManagementModal';
 
 export default function Users() {
   const [filters, setFilters] = useState<UserFilters>({
@@ -53,6 +54,8 @@ export default function Users() {
   });
   const [selectedUser, setSelectedUser] = useState<UserWithLoginModes | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [roleUser, setRoleUser] = useState<UserWithLoginModes | null>(null);
   const queryClient = useQueryClient();
 
   const { data: usersData, isLoading, error } = useQuery({
@@ -331,6 +334,19 @@ export default function Users() {
                     
                     <TableCell>
                       <div className="flex gap-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            setRoleUser(user);
+                            setShowRoleModal(true);
+                          }}
+                          className="mr-2"
+                        >
+                          <Shield className="h-4 w-4 mr-1" />
+                          Roles
+                        </Button>
+                        
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button
@@ -468,6 +484,16 @@ export default function Users() {
             title: "Success",
             description: "User created successfully"
           });
+        }}
+      />
+
+      <RoleManagementModal
+        user={roleUser}
+        open={showRoleModal}
+        onOpenChange={setShowRoleModal}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['users'] });
+          setRoleUser(null);
         }}
       />
       </div>

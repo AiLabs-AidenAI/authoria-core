@@ -33,8 +33,11 @@ class User(Base):
     
     # Relationships
     auth_providers = relationship("AuthProviderLink", back_populates="user", cascade="all, delete-orphan")
-    refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
+    refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan") 
     login_attempts = relationship("LoginAttempt", back_populates="user", cascade="all, delete-orphan")
+    
+    # Role relationship - will be updated after role.py is imported
+    # roles = relationship("Role", secondary="user_roles", back_populates="users")
     
     __table_args__ = (
         Index("idx_users_tenant_email", "tenant_id", "email"),

@@ -14,7 +14,7 @@ from typing import Optional
 
 from app.core.config import get_settings
 from app.core.database import init_db
-from app.api.v1.routes import auth, admin, users, admin_config, tenants
+from app.api.v1.routes import auth, admin, users, admin_config, tenants, roles
 from app.core.security import verify_token
 from app.models.user import User
 
@@ -128,6 +128,7 @@ app.include_router(admin.router, prefix="/v1/admin", tags=["admin"])
 app.include_router(users.router, prefix="/v1/users", tags=["users"])
 app.include_router(admin_config.router, prefix="/v1", tags=["admin-config"])
 app.include_router(tenants.router, prefix="/v1", tags=["tenants"])
+app.include_router(roles.router, prefix="/v1/admin", tags=["roles"])
 
 @app.get("/")
 async def root():
