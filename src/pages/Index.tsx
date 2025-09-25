@@ -7,12 +7,14 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, Settings, Users, ArrowRight, Building2 } from 'lucide-react';
+import { authAPI } from '@/lib/api-client';
 
 const Index = () => {
   const [serviceUp, setServiceUp] = useState<boolean | null>(null);
 
   useEffect(() => {
-    fetch('http://localhost:8000/health')
+    const base = typeof window !== 'undefined' ? authAPI.getBaseUrl() : 'http://localhost:8000';
+    fetch(`${base}/health`)
       .then((res) => setServiceUp(res.ok))
       .catch(() => setServiceUp(false));
   }, []);

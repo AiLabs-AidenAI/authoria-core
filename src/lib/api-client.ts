@@ -44,6 +44,14 @@ class AuthAPIClient {
     this.accessToken = token;
   }
 
+  setBaseUrl(url: string) {
+    this.baseUrl = url;
+  }
+
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
   private async request<T>(
     endpoint: string, 
     options: RequestInit = {}
@@ -460,7 +468,31 @@ class AuthAPIClient {
 }
 
 // Create singleton instance
-export const authAPI = new AuthAPIClient();
+// Resolve base URL from query param (?api=), localStorage, or default
+const resolveBaseUrl = (): string => {
+  try {
+    if (typeof window !== 'undefined') {
+      const current = new URL(window.location.href);
+      const api = current.searchParams.get('api');
+      if (api) {
+        try { localStorage.setItem('apiBaseUrl', api); } catch {}
+        return api;
+      }
+      const stored = localStorage.getItem('apiBaseUrl');
+      if (stored) return stored;
+    }
+  } catch {}
+  return 'http://localhost:8000';
+};
+
+const initialBaseUrl = resolveBaseUrl();
+export const authAPI = new AuthAPIClient(initialBaseUrl);
+
+export const setAPIBaseUrl = (url: string) => {
+  try { localStorage.setItem('apiBaseUrl', url); } catch {}
+  authAPI.setBaseUrl(url);
+};
+export const getAPIBaseUrl = (): string => authAPI.getBaseUrl();
 
 // Helper functions for common operations
 export const downloadFile = (blob: Blob, filename: string) => {
