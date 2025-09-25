@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from ...core.security import create_tokens, verify_token
 from ...core.simple_rate_limiter import rate_limit
 from ...services.auth_service import AuthService
-from ...services.otp_service import OTPService
+from ...services.simple_otp_service import SimpleOTPService
 from ...services.email_service import EmailService
 from ...models.schemas import (
     SignupRequest, 
@@ -29,8 +29,8 @@ router = APIRouter()
 def get_auth_service() -> AuthService:
     return AuthService()
 
-def get_otp_service() -> 'OTPService':
-    return OTPService()
+def get_otp_service() -> 'SimpleOTPService':
+    return SimpleOTPService()
 
 def get_email_service() -> 'EmailService':
     return EmailService()
@@ -140,8 +140,13 @@ async def request_otp(
     await rate_limit("otp_request", req.client.host, limit=3, window=60)
     
     try:
+        # Add debug logging
+        print(f"DEBUG: Generating OTP for email: {request.email}")
+        
         # Generate and store OTP
         otp_code = await otp_service.generate_otp(request.email)
+        
+        print(f"DEBUG: Generated OTP: {otp_code}")
         
         # Send OTP via email
         await email_service.send_otp_email(request.email, otp_code)
@@ -167,8 +172,13 @@ async def verify_otp(
 ):
     """Verify OTP and authenticate user"""
     try:
+        # Add debug logging
+        print(f"DEBUG: Verifying OTP for email: {request.email}, OTP: {request.otp}")
+        
         # Verify OTP
         is_valid = await otp_service.verify_otp(request.email, request.otp)
+        print(f"DEBUG: OTP valid: {is_valid}")
+        
         if not is_valid:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
