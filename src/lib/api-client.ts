@@ -303,6 +303,44 @@ class AuthAPIClient {
     });
   }
 
+  // Bulk create users
+  async bulkCreateUsers(users: Array<{
+    email: string;
+    displayName?: string;
+    password?: string;
+    isAdmin: boolean;
+  }>): Promise<{
+    message: string;
+    success_count: number;
+    failure_count: number;
+    created_users: Array<any>;
+    failed_users: Array<any>;
+  }> {
+    return this.request('/v1/users/bulk-create', {
+      method: 'POST',
+      body: JSON.stringify({ users })
+    });
+  }
+
+  // Update user
+  async updateUserDetails(userId: string, data: {
+    display_name?: string;
+    is_admin?: boolean;
+    is_approved?: boolean;
+  }): Promise<User> {
+    return this.request<User>(`/v1/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  // Delete user
+  async deleteUser(userId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/v1/users/${userId}`, {
+      method: 'DELETE'
+    });
+  }
+
   // Role Management APIs
   async getRoles(): Promise<{ items: any[] }> {
     return this.request<{ items: any[] }>('/v1/admin/roles');

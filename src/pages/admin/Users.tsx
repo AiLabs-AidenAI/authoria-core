@@ -38,7 +38,10 @@ import {
   Key,
   Mail,
   Calendar,
-  Activity
+  Activity,
+  Edit,
+  Trash2,
+  Upload
 } from 'lucide-react';
 import { authAPI, getProviderIcon } from '@/lib/api-client';
 import { UserWithLoginModes, UserFilters } from '@/types/auth';
@@ -46,6 +49,8 @@ import { toast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/Layout/AppLayout';
 import { CreateUserModal } from '@/components/admin/CreateUserModal';
 import { RoleManagementModal } from '@/components/admin/RoleManagementModal';
+import { BulkUserUploadModal } from '@/components/admin/BulkUserUploadModal';
+import { EditUserModal } from '@/components/admin/EditUserModal';
 
 export default function Users() {
   const [filters, setFilters] = useState<UserFilters>({
@@ -55,7 +60,10 @@ export default function Users() {
   const [selectedUser, setSelectedUser] = useState<UserWithLoginModes | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showRoleModal, setShowRoleModal] = useState(false);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [roleUser, setRoleUser] = useState<UserWithLoginModes | null>(null);
+  const [editUser, setEditUser] = useState<UserWithLoginModes | null>(null);
   const queryClient = useQueryClient();
 
   const { data: usersData, isLoading, error } = useQuery({
@@ -105,6 +113,21 @@ export default function Users() {
     onError: (error: any) => {
       toast({ 
         title: "Failed to update login mode", 
+        description: error.message,
+        variant: "destructive"
+      });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: (userId: string) => authAPI.deleteUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast({ title: "User deleted successfully" });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to delete user", 
         description: error.message,
         variant: "destructive"
       });
@@ -177,9 +200,15 @@ export default function Users() {
             Manage user accounts and authentication methods
           </p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
-          Add User
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowBulkModal(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Bulk Upload
+          </Button>
+          <Button onClick={() => setShowCreateModal(true)}>
+            Add User
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -341,10 +370,32 @@ export default function Users() {
                             setRoleUser(user);
                             setShowRoleModal(true);
                           }}
-                          className="mr-2"
                         >
                           <Shield className="h-4 w-4 mr-1" />
                           Roles
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditUser(user);
+                            setShowEditModal(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm(`Are you sure you want to delete user ${user.email}?`)) {
+                              deleteUserMutation.mutate(user.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                         
                         <Dialog>
@@ -478,23 +529,27 @@ export default function Users() {
       <CreateUserModal 
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['users'] });
-          toast({
-            title: "Success",
-            description: "User created successfully"
-          });
-        }}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['users'] })}
       />
 
       <RoleManagementModal
         user={roleUser}
         open={showRoleModal}
         onOpenChange={setShowRoleModal}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['users'] });
-          setRoleUser(null);
-        }}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['users'] })}
+      />
+
+      <BulkUserUploadModal
+        open={showBulkModal}
+        onOpenChange={setShowBulkModal}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['users'] })}
+      />
+
+      <EditUserModal
+        user={editUser}
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['users'] })}
       />
       </div>
     </AppLayout>

@@ -81,30 +81,13 @@ async def get_roles(
 ):
     """Get all available roles"""
     try:
-        # For now, return predefined system roles
-        # In future, this would query the database
-        from ...models.role import SYSTEM_ROLES
-        
-        roles_data = []
-        for role in SYSTEM_ROLES:
-            roles_data.append({
-            "id": str(uuid.uuid4()),  # Generate temporary ID
-            "name": role["name"],
-            "display_name": role["display_name"],
-            "description": role["description"],
-            "is_system_role": role["is_system_role"],
-            "is_admin_role": role["is_admin_role"],
-            "permissions": role["permissions"],
-            "user_count": 0,  # Would be calculated from database
-                "created_at": datetime.utcnow().isoformat()
-            })
-        
-        return {"items": roles_data}
+        roles = await auth_service.get_all_roles()
+        return {"items": roles}
     
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to fetch roles"
+            detail=f"Failed to fetch roles: {str(e)}"
         )
 
 @router.post("/roles")
@@ -177,8 +160,7 @@ async def assign_user_roles(
 ):
     """Assign roles to a user"""
     try:
-        # This would assign roles in the database
-        # For now, return success message
+        await auth_service.assign_user_roles(user_id, request.role_ids, admin_user_id)
         return MessageResponse(
             message=f"Roles assigned to user successfully",
             data={
@@ -187,10 +169,15 @@ async def assign_user_roles(
             }
         )
     
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to assign roles"
+            detail=f"Failed to assign roles: {str(e)}"
         )
 
 @router.get("/users/{user_id}/roles")
@@ -201,14 +188,13 @@ async def get_user_roles(
 ):
     """Get roles assigned to a user"""
     try:
-        # This would query user roles from database
-        # For now, return empty list
-        return {"items": []}
+        roles = await auth_service.get_user_roles(user_id)
+        return {"items": roles}
     
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to fetch user roles"
+            detail=f"Failed to fetch user roles: {str(e)}"
         )
 
 @router.delete("/users/{user_id}/roles/{role_id}")

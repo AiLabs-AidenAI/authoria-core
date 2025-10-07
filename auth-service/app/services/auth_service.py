@@ -15,6 +15,8 @@ import hashlib
 from ..core.database import AsyncSessionLocal
 from ..core.security import create_tokens, hash_refresh_token
 from ..models.user import User, AuthProviderLink, PendingSignup, RefreshToken, LoginAttempt, AuditLog
+from ..models.role import Role, user_roles
+import json
 from ..providers.google_oauth import GoogleOAuthProvider
 from ..providers.azure_oauth import AzureOAuthProvider
 from ..core.config import get_settings
@@ -1020,4 +1022,201 @@ class AuthService:
             await db.commit()
             
             return AuthResult(True)
+    
+    async def get_all_roles(self) -> List[Dict[str, Any]]:
+        """Get all available roles with user counts"""
+        async with AsyncSessionLocal() as db:
+            # Get all roles
+            result = await db.execute(select(Role))
+            roles = result.scalars().all()
+            
+            roles_data = []
+            for role in roles:
+                # Count users with this role
+                count_result = await db.execute(
+                    select(func.count()).select_from(user_roles).where(
+                        user_roles.c.role_id == role.id
+                    )
+                )
+                user_count = count_result.scalar() or 0
+                
+                # Parse permissions JSON
+                permissions = json.loads(role.permissions) if role.permissions else []
+                
+                roles_data.append({
+                    "id": str(role.id),
+                    "name": role.name,
+                    "display_name": role.display_name,
+                    "description": role.description,
+                    "is_system_role": role.is_system_role,
+                    "is_admin_role": role.is_admin_role,
+                    "permissions": permissions,
+                    "user_count": user_count,
+                    "created_at": role.created_at.isoformat()
+                })
+            
+            return roles_data
+    
+    async def get_user_roles(self, user_id: uuid.UUID) -> List[Dict[str, Any]]:
+        """Get all roles assigned to a user"""
+        async with AsyncSessionLocal() as db:
+            # Query user roles with join
+            result = await db.execute(
+                select(Role).join(user_roles).where(
+                    user_roles.c.user_id == user_id
+                )
+            )
+            roles = result.scalars().all()
+            
+            roles_data = []
+            for role in roles:
+                permissions = json.loads(role.permissions) if role.permissions else []
+                roles_data.append({
+                    "id": str(role.id),
+                    "name": role.name,
+                    "display_name": role.display_name,
+                    "description": role.description,
+                    "is_system_role": role.is_system_role,
+                    "is_admin_role": role.is_admin_role,
+                    "permissions": permissions,
+                    "created_at": role.created_at.isoformat()
+                })
+            
+            return roles_data
+    
+    async def assign_user_roles(self, user_id: uuid.UUID, role_ids: List[uuid.UUID], 
+                               assigned_by: uuid.UUID) -> None:
+        """Assign roles to a user (replaces existing roles)"""
+        async with AsyncSessionLocal() as db:
+            # Verify user exists
+            user_result = await db.execute(
+                select(User).where(User.id == user_id)
+            )
+            user = user_result.scalar_one_or_none()
+            if not user:
+                raise ValueError("User not found")
+            
+            # Verify all roles exist
+            roles_result = await db.execute(
+                select(Role).where(Role.id.in_(role_ids))
+            )
+            roles = roles_result.scalars().all()
+            if len(roles) != len(role_ids):
+                raise ValueError("One or more roles not found")
+            
+            # Delete existing role assignments
+            await db.execute(
+                user_roles.delete().where(user_roles.c.user_id == user_id)
+            )
+            
+            # Insert new role assignments
+            for role_id in role_ids:
+                await db.execute(
+                    user_roles.insert().values(
+                        user_id=user_id,
+                        role_id=role_id,
+                        assigned_by=assigned_by
+                    )
+                )
+            
+            # Update user.is_admin based on roles
+            has_admin_role = any(role.is_admin_role for role in roles)
+            user.is_admin = has_admin_role
+            
+            # Log audit event
+            await self._log_audit(
+                db, assigned_by, "roles_assigned", "user", user_id,
+                {
+                    "role_ids": [str(rid) for rid in role_ids],
+                    "email": user.email
+                }
+            )
+            
+            await db.commit()
+    
+    async def bulk_create_users(self, users_data: List[Dict[str, Any]], 
+                               created_by: uuid.UUID) -> Dict[str, Any]:
+        """Bulk create users"""
+        async with AsyncSessionLocal() as db:
+            created_users = []
+            failed_users = []
+            
+            for user_data in users_data:
+                try:
+                    email = user_data.get('email')
+                    display_name = user_data.get('display_name') or email.split('@')[0]
+                    password = user_data.get('password')
+                    is_admin = user_data.get('is_admin', False)
+                    
+                    # Check if email already exists
+                    existing = await db.execute(
+                        select(User).where(User.email == email)
+                    )
+                    if existing.scalar_one_or_none():
+                        failed_users.append({
+                            "email": email,
+                            "reason": "Email already exists"
+                        })
+                        continue
+                    
+                    # Hash password if provided
+                    password_hash = None
+                    if password:
+                        if not self._validate_password_policy(password):
+                            failed_users.append({
+                                "email": email,
+                                "reason": "Password does not meet security requirements"
+                            })
+                            continue
+                        password_hash = pwd_context.hash(password)
+                    
+                    # Create user
+                    new_user = User(
+                        email=email,
+                        display_name=display_name,
+                        password_hash=password_hash,
+                        is_admin=is_admin,
+                        is_approved=True,  # Auto-approve bulk created users
+                        is_active=True
+                    )
+                    db.add(new_user)
+                    await db.flush()
+                    
+                    # Create local password provider link if password provided
+                    if password_hash:
+                        provider_link = AuthProviderLink(
+                            user_id=new_user.id,
+                            provider_name="local_password",
+                            external_id=email,
+                            is_enabled=True
+                        )
+                        db.add(provider_link)
+                    
+                    # Log audit event
+                    await self._log_audit(
+                        db, created_by, "user_created_bulk", "user", new_user.id,
+                        {"email": email, "display_name": display_name}
+                    )
+                    
+                    created_users.append({
+                        "email": email,
+                        "display_name": display_name,
+                        "id": str(new_user.id)
+                    })
+                    
+                except Exception as e:
+                    failed_users.append({
+                        "email": user_data.get('email', 'unknown'),
+                        "reason": str(e)
+                    })
+            
+            await db.commit()
+            
+            return {
+                "success_count": len(created_users),
+                "failure_count": len(failed_users),
+                "created_users": created_users,
+                "failed_users": failed_users
+            }
+
 
