@@ -143,6 +143,7 @@ export const Login = () => {
                       type="email"
                       placeholder="Enter your email"
                       className="pl-10"
+                      autoComplete="email"
                       value={loginData.email}
                       onChange={(e) => setLoginData(prev => ({ ...prev, email: e.target.value }))}
                       required
@@ -159,6 +160,7 @@ export const Login = () => {
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
                       className="pl-10 pr-10"
+                      autoComplete="current-password"
                       value={loginData.password}
                       onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
                       required

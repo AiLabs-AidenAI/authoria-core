@@ -10,6 +10,7 @@ import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
 import SignupSuccess from "./pages/auth/SignupSuccess";
 import PendingApproval from "./pages/auth/PendingApproval";
+import OAuthCallback from "./pages/auth/OAuthCallback";
 import Documentation from "./pages/Documentation";
 import IntegrationGuide from "./pages/IntegrationGuide";
 import AuthConfig from "@/pages/admin/AuthConfig";
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/auth/signup" element={<Signup />} />
             <Route path="/auth/signup-success" element={<SignupSuccess />} />
             <Route path="/auth/pending-approval" element={<PendingApproval />} />
+            <Route path="/auth/callback" element={<OAuthCallback />} />
             <Route path="/documentation" element={
               <ProtectedRoute>
                 <Documentation />

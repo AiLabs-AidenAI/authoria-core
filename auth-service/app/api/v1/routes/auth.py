@@ -317,18 +317,18 @@ async def oauth_callback(
                 detail=result.error_message
             )
         
-        # Set refresh token cookie
+        # Set refresh token cookie with localhost-compatible settings
         response.set_cookie(
             key="refresh_token",
             value=result.refresh_token,
             max_age=30 * 24 * 60 * 60,
             httponly=True,
-            secure=True,
-            samesite="strict"
+            secure=False,  # Set to False for localhost development
+            samesite="lax"  # Use "lax" for localhost
         )
         
-        # Redirect to frontend with access token
-        frontend_url = f"/auth/callback?token={result.access_token}&user_id={result.user_id}"
+        # Redirect to frontend with access token, user_id, and email
+        frontend_url = f"/auth/callback?token={result.access_token}&user_id={result.user_id}&email={result.email}"
         return RedirectResponse(url=frontend_url)
     
     except HTTPException:
